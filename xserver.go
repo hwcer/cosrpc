@@ -133,15 +133,18 @@ func (this *XServer) Start(address *url.URL, register Register) (err error) {
 	}
 	this.rpcServer = server.NewServer()
 	this.rpcServer.DisableHTTPGateway = true
-	this.Registry.Range(func(name string, route *registry.Service) bool {
-		servicePath := strings.Trim(name, "/")
-		register.Register(servicePath, nil, this.Metadata)
+	this.Registry.Range(func(servicePath string, route *registry.Service) bool {
+		if err = register.Register(servicePath, nil, this.Metadata); err != nil {
+			return false
+		}
 		for _, serviceMethod := range route.Paths() {
 			this.rpcServer.AddHandler(servicePath, serviceMethod, this.handle)
 		}
 		return true
 	})
-
+	if err != nil {
+		return
+	}
 	scheme := address.Scheme
 	if scheme == "" {
 		scheme = "tcp"
