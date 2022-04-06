@@ -1,4 +1,4 @@
-module github.com/hwcer/registry
+module github.com/hwcer/cosrpc
 
 go 1.17
 
