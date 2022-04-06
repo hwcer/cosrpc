@@ -3,8 +3,8 @@ package cosrpc
 import (
 	"errors"
 	"fmt"
-	"github.com/hwcer/cosgo/library/registry"
 	"github.com/hwcer/cosgo/utils"
+	"github.com/hwcer/registry"
 	"github.com/smallnest/rpcx/server"
 	"net/url"
 	"reflect"

@@ -5,6 +5,7 @@ go 1.17
 require (
 	github.com/go-redis/redis/v8 v8.11.4
 	github.com/hwcer/cosgo v0.0.0-20220406081012-b723dbd83415
+	github.com/hwcer/registry v0.0.0-20220406082804-0cf22b0b2cb6
 	github.com/nacos-group/nacos-sdk-go v1.0.1
 	github.com/rcrowley/go-metrics v0.0.0-20200313005456-10cdbea86bc0
 	github.com/rpcxio/libkv v0.5.1-0.20210420120011-1fceaedca8a5
