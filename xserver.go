@@ -42,6 +42,7 @@ type XServer struct {
 	*registry.Registry
 	Caller      func(c *server.Context, pr reflect.Value, fn reflect.Value) (interface{}, error) //自定义全局消息调用
 	Serialize   XServerRegistrySerialize                                                         //消息序列化封装
+	Metadata    string
 	rpcServer   *server.Server
 	rpcRegister Register
 }
@@ -134,7 +135,7 @@ func (this *XServer) Start(address *url.URL, register Register) (err error) {
 	this.rpcServer.DisableHTTPGateway = true
 	this.Registry.Range(func(name string, route *registry.Service) bool {
 		servicePath := strings.Trim(name, "/")
-		register.Register(servicePath, nil, "")
+		register.Register(servicePath, nil, this.Metadata)
 		for _, serviceMethod := range route.Paths() {
 			this.rpcServer.AddHandler(servicePath, serviceMethod, this.handle)
 		}
