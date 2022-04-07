@@ -16,10 +16,10 @@ func NewXClient() *XClient {
 
 type Options struct {
 	client    rpcx.XClient
+	options   *rpcx.Option
 	selector  rpcx.Selector
 	selectMod rpcx.SelectMode
 	discovery rpcx.ServiceDiscovery
-	Option    rpcx.Option
 	FailMode  rpcx.FailMode
 }
 
@@ -30,11 +30,11 @@ type XClient struct {
 }
 
 //AddServicePath 观察服务器信息
-func (this *XClient) AddServicePath(servicePath string, selector interface{}) (opts *Options) {
+func (this *XClient) AddServicePath(servicePath string, selector interface{}) *rpcx.Option {
 	if atomic.LoadInt32(&this.start) > 0 {
 		logger.Error("XClient已经启动无法再添加Service")
 	}
-	opts = &Options{}
+	opts := &Options{}
 	this.clients[servicePath] = opts
 	switch selector.(type) {
 	case rpcx.Selector:
@@ -45,9 +45,10 @@ func (this *XClient) AddServicePath(servicePath string, selector interface{}) (o
 	default:
 		logger.Fatal("XClient AddServicePath arg(Selector) type error:%v", selector)
 	}
-	opts.Option = rpcx.DefaultOption
+	r := rpcx.DefaultOption
+	opts.options = &r
 	opts.FailMode = rpcx.Failtry
-	return
+	return opts.options
 }
 
 func (this *XClient) Start(discovery rpcx.ServiceDiscovery) (err error) {
@@ -84,7 +85,7 @@ func (this *XClient) create(servicePath string) (err error) {
 	//if c.discovery, err = this.discovery.Clone(servicePath); err != nil {
 	//	return
 	//}
-	c.client = rpcx.NewXClient(servicePath, c.FailMode, c.selectMod, c.discovery, c.Option)
+	c.client = rpcx.NewXClient(servicePath, c.FailMode, c.selectMod, c.discovery, *c.options)
 	if c.selectMod == rpcx.SelectByUser {
 		c.client.SetSelector(c.selector)
 	}
