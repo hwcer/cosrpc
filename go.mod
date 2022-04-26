@@ -4,7 +4,6 @@ go 1.17
 
 require (
 	github.com/go-redis/redis/v8 v8.11.4
-	github.com/hwcer/cosgo v0.0.0-20220406081012-b723dbd83415
 	github.com/hwcer/registry v0.0.0-20220406082804-0cf22b0b2cb6
 	github.com/nacos-group/nacos-sdk-go v1.0.1
 	github.com/rcrowley/go-metrics v0.0.0-20200313005456-10cdbea86bc0
@@ -15,6 +14,8 @@ require (
 	go.etcd.io/etcd/client/v2 v2.305.0-alpha.0
 	go.etcd.io/etcd/client/v3 v3.5.0-alpha.0
 )
+
+require github.com/hwcer/cosgo v0.0.0-20220406081012-b723dbd83415
 
 require (
 	github.com/apache/thrift v0.15.0 // indirect

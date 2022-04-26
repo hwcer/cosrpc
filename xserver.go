@@ -6,7 +6,6 @@ import (
 	"github.com/hwcer/cosgo/utils"
 	"github.com/hwcer/registry"
 	"github.com/smallnest/rpcx/server"
-	"net/url"
 	"reflect"
 	"strings"
 	"time"
@@ -138,7 +137,7 @@ func (this *XServer) Services() (s []string) {
 	return
 }
 
-func (this *XServer) Start(address *url.URL, register Register) (err error) {
+func (this *XServer) Start(address *utils.Address, register Register) (err error) {
 	if err = register.Start(); err != nil {
 		return
 	}
@@ -158,12 +157,9 @@ func (this *XServer) Start(address *url.URL, register Register) (err error) {
 	if err != nil {
 		return
 	}
-	scheme := address.Scheme
-	if scheme == "" {
-		scheme = "tcp"
-	}
+	url, _ := address.URL("tcp")
 	err = utils.Timeout(time.Second, func() error {
-		return this.rpcServer.Serve(scheme, address.Host)
+		return this.rpcServer.Serve(url.Scheme, url.Host)
 	})
 	if err == utils.ErrorTimeout {
 		err = nil
