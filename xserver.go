@@ -157,9 +157,9 @@ func (this *XServer) Start(address *utils.Address, register Register) (err error
 	if err != nil {
 		return
 	}
-	url, _ := address.URL("tcp")
+	uri, _ := address.URL("tcp")
 	err = utils.Timeout(time.Second, func() error {
-		return this.rpcServer.Serve(url.Scheme, url.Host)
+		return this.rpcServer.Serve(uri.Scheme, uri.Host)
 	})
 	if err == utils.ErrorTimeout {
 		err = nil
