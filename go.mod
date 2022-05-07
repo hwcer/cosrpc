@@ -15,7 +15,7 @@ require (
 	go.etcd.io/etcd/client/v3 v3.5.0-alpha.0
 )
 
-require github.com/hwcer/cosgo v0.0.0-20220406081012-b723dbd83415
+require github.com/hwcer/cosgo v0.0.0-20220507065546-60dfb4190d31
 
 require (
 	github.com/apache/thrift v0.15.0 // indirect
