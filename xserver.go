@@ -19,14 +19,8 @@ type Register interface {
 	Register(name string, i interface{}, metadata string) (err error)
 }
 
-type XServerRegistryCaller interface {
-	Caller(c *server.Context, fn reflect.Value) interface{}
-}
-
-type XServerRegistrySerialize func(c *server.Context, reply interface{}) error
-
 func NewXServer(opts *registry.Options) *XServer {
-	r := &XServer{}
+	r := &XServer{rpcHandler: make(map[string]*RegistryHandler)}
 	if opts == nil {
 		opts = registry.NewOptions()
 	}
@@ -39,10 +33,10 @@ func NewXServer(opts *registry.Options) *XServer {
 
 type XServer struct {
 	*registry.Registry
-	Caller      func(c *server.Context, pr reflect.Value, fn reflect.Value) (interface{}, error) //自定义全局消息调用
-	Serialize   XServerRegistrySerialize                                                         //消息序列化封装
-	Metadata    string
+	Caller      RegistryCaller    //全局消息调用
+	Serialize   RegistrySerialize //全局消息序列化封装
 	rpcServer   *server.Server
+	rpcHandler  map[string]*RegistryHandler
 	rpcRegister Register
 }
 
@@ -67,23 +61,38 @@ func (this *XServer) filter(pr, fn reflect.Value) bool {
 
 //handle cosweb入口
 func (this *XServer) handle(sc *server.Context) (err error) {
-	urlPath := this.Clean(sc.ServicePath(), sc.ServiceMethod())
-	route, ok := this.Match(urlPath)
+	defer func() {
+		if r := recover(); r != nil {
+			err = fmt.Errorf("%v", r)
+			//logger.Error("%v", err)
+		}
+	}()
+	urlPath := this.Registry.Clean(sc.ServicePath(), sc.ServiceMethod())
+	service, ok := this.Match(urlPath)
 	if !ok {
 		return errors.New("ServicePath not exist")
 	}
-	pr, fn, ok := route.Match(urlPath)
+	pr, fn, ok := service.Match(urlPath)
 	if !ok {
 		return errors.New("ServiceMethod not exist")
 	}
+	handler := this.rpcHandler[service.Name()]
 
 	var reply interface{}
-	reply, err = this.caller(sc, pr, fn)
-
+	if handler != nil && handler.Caller != nil {
+		reply, err = handler.Caller(sc, pr, fn)
+	} else if this.Caller != nil {
+		reply, err = this.Caller(sc, pr, fn)
+	} else {
+		reply, err = this.caller(sc, pr, fn)
+	}
 	if err != nil {
 		return
 	}
-	if this.Serialize != nil {
+
+	if handler != nil && handler.Serialize != nil {
+		return handler.Serialize(sc, reply)
+	} else if this.Serialize != nil {
 		return this.Serialize(sc, reply)
 	} else {
 		return sc.Write(reply)
@@ -91,19 +100,10 @@ func (this *XServer) handle(sc *server.Context) (err error) {
 }
 
 func (this *XServer) caller(c *server.Context, pr, fn reflect.Value) (reply interface{}, err error) {
-	defer func() {
-		if r := recover(); r != nil {
-			err = fmt.Errorf("%v", r)
-			//logger.Error("%v", err)
-		}
-	}()
-	if this.Caller != nil {
-		return this.Caller(c, pr, fn)
-	}
 	if !pr.IsValid() {
 		f, _ := fn.Interface().(func(c *server.Context) interface{})
 		reply = f(c)
-	} else if s, ok := pr.Interface().(XServerRegistryCaller); ok {
+	} else if s, ok := pr.Interface().(RegistryInterface); ok {
 		reply = s.Caller(c, fn)
 	} else {
 		ret := fn.Call([]reflect.Value{pr, reflect.ValueOf(c)})
@@ -112,22 +112,34 @@ func (this *XServer) caller(c *server.Context, pr, fn reflect.Value) (reply inte
 	return
 }
 
-func (this *XServer) Server() *server.Server {
+func (this *XServer) RpcServer() *server.Server {
 	return this.rpcServer
 }
 
-func (this *XServer) Route(name string) *registry.Service {
-	route := this.Registry.Service(name)
-	return route
-}
+//func (this *XServer) Route(name string) *registry.Service {
+//	route := this.Registry.Service(name)
+//	return route
+//}
 
-func (this *XServer) Services() (s []string) {
-	this.Registry.Range(func(name string, _ *registry.Service) bool {
-		servicePath := strings.TrimPrefix(name, "/")
-		s = append(s, servicePath)
-		return true
-	})
-	return
+//func (this *XServer) Services() (s []string) {
+//	this.Registry.Range(func(name string, _ *registry.Service) bool {
+//		servicePath := strings.TrimPrefix(name, "/")
+//		s = append(s, servicePath)
+//		return true
+//	})
+//	return
+//}
+
+func (this *XServer) Service(name string, middleware ...interface{}) *registry.Service {
+	s := this.Registry.Service(name)
+	if len(middleware) > 0 {
+		handler := &RegistryHandler{}
+		for _, m := range middleware {
+			handler.Use(m)
+		}
+		this.rpcHandler[s.Name()] = handler
+	}
+	return s
 }
 
 func (this *XServer) Start(address *utils.Address, register Register) (err error) {
@@ -136,17 +148,19 @@ func (this *XServer) Start(address *utils.Address, register Register) (err error
 	}
 	this.rpcServer = server.NewServer()
 	this.rpcServer.DisableHTTPGateway = true
-	this.Registry.Range(func(name string, route *registry.Service) bool {
-		servicePath := strings.Trim(name, "/")
-		if err = register.Register(servicePath, nil, this.Metadata); err != nil {
-			return false
+	for _, service := range this.Registry.Services() {
+		servicePath := service.Name()
+		var metadata string
+		if handle, ok := this.rpcHandler[servicePath]; ok {
+			metadata = strings.Join(handle.Metadata, "&")
 		}
-		for _, p := range route.Paths() {
-			serviceMethod := strings.Trim(p, "/")
+		if err = register.Register(servicePath, nil, metadata); err != nil {
+			return
+		}
+		for _, serviceMethod := range service.Paths() {
 			this.rpcServer.AddHandler(servicePath, serviceMethod, this.handle)
 		}
-		return true
-	})
+	}
 	if err != nil {
 		return
 	}
