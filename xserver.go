@@ -13,12 +13,6 @@ import (
 
 // 通过registry集中注册对象
 
-type Context struct {
-	*server.Context
-}
-
-var typeOfContext = reflect.TypeOf((*Context)(nil)).Elem()
-
 type Register interface {
 	Stop() error
 	Start() error
@@ -26,10 +20,10 @@ type Register interface {
 }
 
 type XServerRegistryCaller interface {
-	Caller(c *Context, fn reflect.Value) interface{}
+	Caller(c *server.Context, fn reflect.Value) interface{}
 }
 
-type XServerRegistrySerialize func(c *Context, reply interface{}) error
+type XServerRegistrySerialize func(c *server.Context, reply interface{}) error
 
 func NewXServer(opts *registry.Options) *XServer {
 	r := &XServer{}
@@ -45,8 +39,8 @@ func NewXServer(opts *registry.Options) *XServer {
 
 type XServer struct {
 	*registry.Registry
-	Caller      func(c *Context, pr reflect.Value, fn reflect.Value) (interface{}, error) //自定义全局消息调用
-	Serialize   XServerRegistrySerialize                                                  //消息序列化封装
+	Caller      func(c *server.Context, pr reflect.Value, fn reflect.Value) (interface{}, error) //自定义全局消息调用
+	Serialize   XServerRegistrySerialize                                                         //消息序列化封装
 	Metadata    string
 	rpcServer   *server.Server
 	rpcRegister Register
@@ -54,7 +48,7 @@ type XServer struct {
 
 func (this *XServer) filter(pr, fn reflect.Value) bool {
 	if !pr.IsValid() {
-		_, ok := fn.Interface().(func(*Context) interface{})
+		_, ok := fn.Interface().(func(*server.Context) interface{})
 		return ok
 	}
 	t := fn.Type()
@@ -73,8 +67,7 @@ func (this *XServer) filter(pr, fn reflect.Value) bool {
 
 //handle cosweb入口
 func (this *XServer) handle(sc *server.Context) (err error) {
-	c := &Context{Context: sc}
-	urlPath := this.Clean(c.ServicePath(), c.ServiceMethod())
+	urlPath := this.Clean(sc.ServicePath(), sc.ServiceMethod())
 	route, ok := this.Match(urlPath)
 	if !ok {
 		return errors.New("ServicePath not exist")
@@ -85,19 +78,19 @@ func (this *XServer) handle(sc *server.Context) (err error) {
 	}
 
 	var reply interface{}
-	reply, err = this.caller(c, pr, fn)
+	reply, err = this.caller(sc, pr, fn)
 
 	if err != nil {
 		return
 	}
 	if this.Serialize != nil {
-		return this.Serialize(c, reply)
+		return this.Serialize(sc, reply)
 	} else {
-		return c.Write(reply)
+		return sc.Write(reply)
 	}
 }
 
-func (this *XServer) caller(c *Context, pr, fn reflect.Value) (reply interface{}, err error) {
+func (this *XServer) caller(c *server.Context, pr, fn reflect.Value) (reply interface{}, err error) {
 	defer func() {
 		if r := recover(); r != nil {
 			err = fmt.Errorf("%v", r)
@@ -108,7 +101,7 @@ func (this *XServer) caller(c *Context, pr, fn reflect.Value) (reply interface{}
 		return this.Caller(c, pr, fn)
 	}
 	if !pr.IsValid() {
-		f, _ := fn.Interface().(func(c *Context) interface{})
+		f, _ := fn.Interface().(func(c *server.Context) interface{})
 		reply = f(c)
 	} else if s, ok := pr.Interface().(XServerRegistryCaller); ok {
 		reply = s.Caller(c, fn)
