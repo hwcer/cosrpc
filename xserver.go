@@ -7,7 +7,6 @@ import (
 	"github.com/hwcer/registry"
 	"github.com/smallnest/rpcx/server"
 	"reflect"
-	"strings"
 	"time"
 )
 
@@ -152,7 +151,9 @@ func (this *XServer) Start(address *utils.Address, register Register) (err error
 		servicePath := service.Name()
 		var metadata string
 		if handle, ok := this.rpcHandler[servicePath]; ok {
-			metadata = strings.Join(handle.Metadata, "&")
+			if handle.Metadata != nil {
+				metadata = handle.Metadata()
+			}
 		}
 		if err = register.Register(servicePath, nil, metadata); err != nil {
 			return
