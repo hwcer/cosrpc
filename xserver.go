@@ -129,11 +129,11 @@ func (this *XServer) RpcServer() *server.Server {
 //	return
 //}
 
-func (this *XServer) Service(name string, middleware ...interface{}) *registry.Service {
+func (this *XServer) Service(name string, handlers ...interface{}) *registry.Service {
 	s := this.Registry.Service(name)
-	if len(middleware) > 0 {
+	if len(handlers) > 0 {
 		handler := &RegistryHandler{}
-		for _, m := range middleware {
+		for _, m := range handlers {
 			handler.Use(m)
 		}
 		this.rpcHandler[s.Name()] = handler
