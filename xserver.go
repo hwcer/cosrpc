@@ -7,6 +7,7 @@ import (
 	"github.com/hwcer/registry"
 	"github.com/smallnest/rpcx/server"
 	"reflect"
+	"strings"
 	"time"
 )
 
@@ -32,14 +33,18 @@ func NewXServer(opts *registry.Options) *XServer {
 
 type XServer struct {
 	*registry.Registry
-	Caller      RegistryCaller    //全局消息调用
-	Serialize   RegistrySerialize //全局消息序列化封装
+	Caller      func(c *server.Context, pr reflect.Value, fn reflect.Value) (interface{}, error) //全局消息调用
+	Serialize   func(c *server.Context, reply interface{}) error                                 //全局消息序列化封装
 	rpcServer   *server.Server
 	rpcHandler  map[string]*RegistryHandler
 	rpcRegister Register
 }
 
-func (this *XServer) filter(pr, fn reflect.Value) bool {
+func (this *XServer) filter(s *registry.Service, pr, fn reflect.Value) bool {
+	handler := this.rpcHandler[s.Name()]
+	if handler != nil && handler.Filter != nil {
+		return handler.Filter(s, pr, fn)
+	}
 	if !pr.IsValid() {
 		_, ok := fn.Interface().(func(*server.Context) interface{})
 		return ok
@@ -149,13 +154,13 @@ func (this *XServer) Start(address *utils.Address, register Register) (err error
 	this.rpcServer.DisableHTTPGateway = true
 	for _, service := range this.Registry.Services() {
 		servicePath := service.Name()
-		var metadata string
+		var metadata []string
 		if handle, ok := this.rpcHandler[servicePath]; ok {
-			if handle.Metadata != nil {
-				metadata = handle.Metadata()
+			for _, f := range handle.Metadata {
+				metadata = append(metadata, f())
 			}
 		}
-		if err = register.Register(servicePath, nil, metadata); err != nil {
+		if err = register.Register(servicePath, nil, strings.Join(metadata, "&")); err != nil {
 			return
 		}
 		for _, serviceMethod := range service.Paths() {
