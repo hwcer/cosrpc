@@ -63,7 +63,7 @@ func (this *XServer) filter(s *registry.Service, pr, fn reflect.Value) bool {
 	return true
 }
 
-//handle cosweb入口
+//handle services入口
 func (this *XServer) handle(sc *server.Context) (err error) {
 	defer func() {
 		if r := recover(); r != nil {

@@ -1,7 +1,7 @@
 package etcdv3
 
 import (
-	"github.com/hwcer/cosgo/library/logger"
+	"github.com/hwcer/cosgo/logger"
 	"strings"
 	"sync"
 	"time"

@@ -3,8 +3,9 @@ package cosrpc
 import (
 	"context"
 	"fmt"
-	"github.com/hwcer/cosgo/library/logger"
+	"github.com/hwcer/cosgo/logger"
 	rpcx "github.com/smallnest/rpcx/client"
+	"github.com/smallnest/rpcx/share"
 	"sync/atomic"
 )
 
@@ -111,9 +112,13 @@ func (this *XClient) Client(servicePath string) rpcx.XClient {
 	}
 }
 
-func (this *XClient) Call(servicePath, serviceMethod string, args, reply interface{}) (err error) {
+func (this *XClient) Call(servicePath, serviceMethod string, args, reply interface{}, metadata map[string]string) (err error) {
 	if c := this.Client(servicePath); c != nil {
-		return c.Call(context.Background(), serviceMethod, args, reply)
+		ctx := context.Background()
+		if metadata != nil {
+			ctx = context.WithValue(ctx, share.ReqMetaDataKey, metadata)
+		}
+		return c.Call(ctx, serviceMethod, args, reply)
 	} else {
 		return fmt.Errorf("服务不存在")
 	}

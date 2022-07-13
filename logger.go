@@ -2,7 +2,7 @@ package cosrpc
 
 import (
 	"fmt"
-	"github.com/hwcer/cosgo/library/logger"
+	"github.com/hwcer/cosgo/logger"
 	"github.com/smallnest/rpcx/log"
 )
 
@@ -55,9 +55,9 @@ func (l *dummyLogger) Fatalf(format string, v ...interface{}) {
 }
 
 func (l *dummyLogger) Panic(v ...interface{}) {
-	logger.Panic(fmt.Sprint(v))
+	logger.Fatal(fmt.Sprint(v))
 }
 
 func (l *dummyLogger) Panicf(format string, v ...interface{}) {
-	logger.Panic(format, v...)
+	logger.Fatal(format, v...)
 }
