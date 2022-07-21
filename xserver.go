@@ -170,18 +170,21 @@ func (this *XServer) Start(address *utils.Address, register Register) (err error
 	if err != nil {
 		return
 	}
-	uri, _ := address.URL("tcp")
-	err = utils.Timeout(time.Second, func() error {
-		return this.rpcServer.Serve(uri.Scheme, uri.Host)
+	err = address.Handle("", func(addr string) error {
+		err = utils.Timeout(time.Second, func() error {
+			return this.rpcServer.Serve("tcp", addr)
+		})
+		if err == utils.ErrorTimeout {
+			err = nil
+		}
+		return err
 	})
-	if err == utils.ErrorTimeout {
-		err = nil
-	}
+
 	return
 }
 
 func (this *XServer) Close() error {
-	this.rpcServer.Shutdown(nil)
-	this.rpcRegister.Stop()
+	_ = this.rpcServer.Shutdown(nil)
+	_ = this.rpcRegister.Stop()
 	return nil
 }
