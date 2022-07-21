@@ -146,10 +146,15 @@ func (this *XServer) Service(name string, handlers ...interface{}) *registry.Ser
 	return s
 }
 
-func (this *XServer) Start(address *utils.Address, register Register) (err error) {
+func (this *XServer) Start(network, address string, register Register) (err error) {
 	if err = register.Start(); err != nil {
 		return
 	}
+	defer func() {
+		if err != nil {
+			_ = register.Stop()
+		}
+	}()
 	this.rpcServer = server.NewServer()
 	this.rpcServer.DisableHTTPGateway = true
 	for _, service := range this.Registry.Services() {
@@ -167,19 +172,13 @@ func (this *XServer) Start(address *utils.Address, register Register) (err error
 			this.rpcServer.AddHandler(servicePath, serviceMethod, this.handle)
 		}
 	}
-	if err != nil {
-		return
-	}
-	err = address.Handle("", func(addr string) error {
-		err = utils.Timeout(time.Second, func() error {
-			return this.rpcServer.Serve("tcp", addr)
-		})
-		if err == utils.ErrorTimeout {
-			err = nil
-		}
-		return err
-	})
 
+	err = utils.Timeout(time.Second, func() error {
+		return this.rpcServer.Serve(network, address)
+	})
+	if err == utils.ErrorTimeout {
+		err = nil
+	}
 	return
 }
 
