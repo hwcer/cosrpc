@@ -1,6 +1,7 @@
 package cosrpc
 
 import (
+	"crypto/tls"
 	"errors"
 	"fmt"
 	"github.com/hwcer/cosgo/utils"
@@ -172,7 +173,6 @@ func (this *XServer) Start(network, address string, register Register) (err erro
 			this.rpcServer.AddHandler(servicePath, serviceMethod, this.handle)
 		}
 	}
-
 	err = utils.Timeout(time.Second, func() error {
 		return this.rpcServer.Serve(network, address)
 	})
@@ -186,4 +186,19 @@ func (this *XServer) Close() error {
 	_ = this.rpcServer.Shutdown(nil)
 	_ = this.rpcRegister.Stop()
 	return nil
+}
+
+// WithTLSConfig sets tls.Config.
+func (this *XServer) WithTLSConfig(cfg *tls.Config) {
+	server.WithTLSConfig(cfg)(this.rpcServer)
+}
+
+// WithReadTimeout sets readTimeout.
+func (this *XServer) WithReadTimeout(readTimeout time.Duration) {
+	server.WithReadTimeout(readTimeout)(this.rpcServer)
+}
+
+// WithWriteTimeout sets writeTimeout.
+func (this *XServer) WithWriteTimeout(writeTimeout time.Duration) {
+	server.WithWriteTimeout(writeTimeout)(this.rpcServer)
 }

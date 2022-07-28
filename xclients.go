@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"github.com/hwcer/cosgo/logger"
 	rpcx "github.com/smallnest/rpcx/client"
-	"github.com/smallnest/rpcx/share"
 	"sync/atomic"
 )
 
@@ -33,7 +32,7 @@ type XClient struct {
 //AddServicePath 观察服务器信息
 func (this *XClient) AddServicePath(servicePath string, selector interface{}) *rpcx.Option {
 	if atomic.LoadInt32(&this.start) > 0 {
-		logger.Error("XClient已经启动无法再添加Service")
+		logger.Fatal("Client已经启动无法再添加Service")
 	}
 	opts := &Options{}
 	this.clients[servicePath] = opts
@@ -112,21 +111,23 @@ func (this *XClient) Client(servicePath string) rpcx.XClient {
 	}
 }
 
-func (this *XClient) Call(servicePath, serviceMethod string, args, reply interface{}, metadata map[string]string) (err error) {
+func (this *XClient) Call(ctx context.Context, servicePath, serviceMethod string, args, reply interface{}) (err error) {
+	if ctx == nil {
+		ctx = context.Background()
+	}
 	if c := this.Client(servicePath); c != nil {
-		ctx := context.Background()
-		if metadata != nil {
-			ctx = context.WithValue(ctx, share.ReqMetaDataKey, metadata)
-		}
 		return c.Call(ctx, serviceMethod, args, reply)
 	} else {
 		return fmt.Errorf("服务不存在")
 	}
 }
 
-func (this *XClient) Broadcast(servicePath, serviceMethod string, args, reply interface{}) (err error) {
+func (this *XClient) Broadcast(ctx context.Context, servicePath, serviceMethod string, args, reply interface{}) (err error) {
+	if ctx == nil {
+		ctx = context.Background()
+	}
 	if c := this.Client(servicePath); c != nil {
-		return c.Broadcast(context.Background(), serviceMethod, args, reply)
+		return c.Broadcast(ctx, serviceMethod, args, reply)
 	} else {
 		return fmt.Errorf("服务不存在")
 	}
