@@ -14,14 +14,14 @@ import (
 
 // 通过registry集中注册对象
 
-type Register interface {
+type rpcRegister interface {
 	Stop() error
 	Start() error
 	Register(name string, i interface{}, metadata string) (err error)
 }
 
 func NewXServer(opts *registry.Options) *XServer {
-	r := &XServer{rpcHandler: make(map[string]*RegistryHandler)}
+	r := &XServer{rpcHandler: make(map[string]*Registry)}
 	if opts == nil {
 		opts = registry.NewOptions()
 	}
@@ -29,6 +29,7 @@ func NewXServer(opts *registry.Options) *XServer {
 		opts.Filter = r.filter
 	}
 	r.Registry = registry.New(opts)
+	r.rpcServer = server.NewServer()
 	return r
 }
 
@@ -37,8 +38,8 @@ type XServer struct {
 	Caller      func(c *server.Context, pr reflect.Value, fn reflect.Value) (interface{}, error) //全局消息调用
 	Serialize   func(c *server.Context, reply interface{}) error                                 //全局消息序列化封装
 	rpcServer   *server.Server
-	rpcHandler  map[string]*RegistryHandler
-	rpcRegister Register
+	rpcHandler  map[string]*Registry
+	rpcRegister rpcRegister
 }
 
 func (this *XServer) filter(s *registry.Service, pr, fn reflect.Value) bool {
@@ -64,7 +65,7 @@ func (this *XServer) filter(s *registry.Service, pr, fn reflect.Value) bool {
 	return true
 }
 
-//handle services入口
+// handle services入口
 func (this *XServer) handle(sc *server.Context) (err error) {
 	defer func() {
 		if r := recover(); r != nil {
@@ -108,7 +109,7 @@ func (this *XServer) caller(c *server.Context, pr, fn reflect.Value) (reply inte
 	if !pr.IsValid() {
 		f, _ := fn.Interface().(func(c *server.Context) interface{})
 		reply = f(c)
-	} else if s, ok := pr.Interface().(RegistryInterface); ok {
+	} else if s, ok := pr.Interface().(registryInterface); ok {
 		reply = s.Caller(c, fn)
 	} else {
 		ret := fn.Call([]reflect.Value{pr, reflect.ValueOf(c)})
@@ -117,28 +118,14 @@ func (this *XServer) caller(c *server.Context, pr, fn reflect.Value) (reply inte
 	return
 }
 
-func (this *XServer) RpcServer() *server.Server {
+func (this *XServer) Server() *server.Server {
 	return this.rpcServer
 }
-
-//func (this *XServer) Route(name string) *registry.Service {
-//	route := this.Registry.Service(name)
-//	return route
-//}
-
-//func (this *XServer) Services() (s []string) {
-//	this.Registry.Range(func(name string, _ *registry.Service) bool {
-//		servicePath := strings.TrimPrefix(name, "/")
-//		s = append(s, servicePath)
-//		return true
-//	})
-//	return
-//}
 
 func (this *XServer) Service(name string, handlers ...interface{}) *registry.Service {
 	s := this.Registry.Service(name)
 	if len(handlers) > 0 {
-		handler := &RegistryHandler{}
+		handler := &Registry{}
 		for _, m := range handlers {
 			handler.Use(m)
 		}
@@ -147,7 +134,7 @@ func (this *XServer) Service(name string, handlers ...interface{}) *registry.Ser
 	return s
 }
 
-func (this *XServer) Start(network, address string, register Register) (err error) {
+func (this *XServer) Start(network, address string, register rpcRegister) (err error) {
 	if err = register.Start(); err != nil {
 		return
 	}
@@ -156,7 +143,6 @@ func (this *XServer) Start(network, address string, register Register) (err erro
 			_ = register.Stop()
 		}
 	}()
-	this.rpcServer = server.NewServer()
 	this.rpcServer.DisableHTTPGateway = true
 	for _, service := range this.Registry.Services() {
 		servicePath := service.Name()

@@ -6,33 +6,35 @@ import (
 	"reflect"
 )
 
-type RegistryFilter interface {
+type RegistryFilter func(s *registry.Service, pr, fn reflect.Value) bool
+type RegistryCaller func(c *server.Context, pr reflect.Value, fn reflect.Value) (interface{}, error)
+type RegistryMetadata func() string
+type RegistrySerialize func(c *server.Context, reply interface{}) error
+
+type registryInterface interface {
+	Caller(c *server.Context, fn reflect.Value) interface{}
+}
+type registryFilterHandle interface {
 	Filter(s *registry.Service, pr, fn reflect.Value) bool
 }
-
-type RegistryCaller interface {
+type registryCallerHandle interface {
 	Caller(c *server.Context, pr reflect.Value, fn reflect.Value) (interface{}, error)
 }
-type RegistrySerialize interface {
+type registryMetadataHandle interface {
+	Metadata() string
+}
+type registrySerializeHandle interface {
 	Serialize(c *server.Context, reply interface{}) error
 }
 
-type RegistryMetadata interface {
-	Metadata() string
-}
-
-type RegistryInterface interface {
-	Caller(c *server.Context, fn reflect.Value) interface{}
-}
-
-type RegistryHandler struct {
+type Registry struct {
 	Filter    func(s *registry.Service, pr, fn reflect.Value) bool                             // 接口过滤
 	Caller    func(c *server.Context, pr reflect.Value, fn reflect.Value) (interface{}, error) //消息调用
 	Metadata  []func() string                                                                  //获取metadata
 	Serialize func(c *server.Context, reply interface{}) error                                 //消息序列化封装
 }
 
-func (this *RegistryHandler) Copy(src *RegistryHandler) {
+func (this *Registry) Copy(src *Registry) {
 	if src.Filter != nil {
 		this.Filter = src.Filter
 	}
@@ -47,17 +49,31 @@ func (this *RegistryHandler) Copy(src *RegistryHandler) {
 	}
 }
 
-func (this *RegistryHandler) Use(src interface{}) {
+func (this *Registry) Use(src interface{}) {
 	if v, ok := src.(RegistryFilter); ok {
-		this.Filter = v.Filter
+		this.Filter = v
 	}
 	if v, ok := src.(RegistryCaller); ok {
-		this.Caller = v.Caller
-	}
-	if v, ok := src.(RegistrySerialize); ok {
-		this.Serialize = v.Serialize
+		this.Caller = v
 	}
 	if v, ok := src.(RegistryMetadata); ok {
+		this.Metadata = append(this.Metadata, v)
+	}
+	if v, ok := src.(RegistrySerialize); ok {
+		this.Serialize = v
+	}
+
+	if v, ok := src.(registryFilterHandle); ok {
+		this.Filter = v.Filter
+	}
+	if v, ok := src.(registryCallerHandle); ok {
+		this.Caller = v.Caller
+	}
+	if v, ok := src.(registryMetadataHandle); ok {
 		this.Metadata = append(this.Metadata, v.Metadata)
 	}
+	if v, ok := src.(registrySerializeHandle); ok {
+		this.Serialize = v.Serialize
+	}
+
 }
