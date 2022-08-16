@@ -1,9 +1,10 @@
-package cosrpc
+package xclient
 
 import (
 	"context"
 	"fmt"
 	"github.com/hwcer/cosgo/logger"
+	"github.com/rpcxio/libkv/store"
 	rpcx "github.com/smallnest/rpcx/client"
 	"sync/atomic"
 )
@@ -29,7 +30,7 @@ type XClient struct {
 	discovery rpcx.ServiceDiscovery
 }
 
-//AddServicePath 观察服务器信息
+// AddServicePath 观察服务器信息
 func (this *XClient) AddServicePath(servicePath string, selector interface{}) *rpcx.Option {
 	if atomic.LoadInt32(&this.start) > 0 {
 		logger.Fatal("Client已经启动无法再添加Service")
@@ -82,9 +83,9 @@ func (this *XClient) Close() (errs []error) {
 func (this *XClient) create(servicePath string) (err error) {
 	c := this.clients[servicePath]
 	c.discovery = this.discovery
-	//if c.discovery, err = this.discovery.Clone(servicePath); err != nil {
-	//	return
-	//}
+	if c.discovery, err = this.discovery.Clone(servicePath); err != nil && err != store.ErrKeyNotFound {
+		return
+	}
 	c.client = rpcx.NewXClient(servicePath, c.FailMode, c.selectMod, c.discovery, *c.options)
 	if c.selectMod == rpcx.SelectByUser {
 		c.client.SetSelector(c.selector)

@@ -1,4 +1,4 @@
-package cosrpc
+package xserver
 
 import (
 	"github.com/hwcer/registry"
@@ -27,14 +27,14 @@ type registrySerializeHandle interface {
 	Serialize(c *server.Context, reply interface{}) error
 }
 
-type Registry struct {
+type Handler struct {
 	Filter    func(s *registry.Service, pr, fn reflect.Value) bool                             // 接口过滤
 	Caller    func(c *server.Context, pr reflect.Value, fn reflect.Value) (interface{}, error) //消息调用
 	Metadata  []func() string                                                                  //获取metadata
 	Serialize func(c *server.Context, reply interface{}) error                                 //消息序列化封装
 }
 
-func (this *Registry) Copy(src *Registry) {
+func (this *Handler) Copy(src *Handler) {
 	if src.Filter != nil {
 		this.Filter = src.Filter
 	}
@@ -49,7 +49,7 @@ func (this *Registry) Copy(src *Registry) {
 	}
 }
 
-func (this *Registry) Use(src interface{}) {
+func (this *Handler) Use(src interface{}) {
 	if v, ok := src.(RegistryFilter); ok {
 		this.Filter = v
 	}

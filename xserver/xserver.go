@@ -1,4 +1,4 @@
-package cosrpc
+package xserver
 
 import (
 	"crypto/tls"
@@ -14,14 +14,8 @@ import (
 
 // 通过registry集中注册对象
 
-type rpcRegister interface {
-	Stop() error
-	Start() error
-	Register(name string, i interface{}, metadata string) (err error)
-}
-
 func NewXServer(opts *registry.Options) *XServer {
-	r := &XServer{rpcHandler: make(map[string]*Registry)}
+	r := &XServer{rpcHandler: make(map[string]*Handler)}
 	if opts == nil {
 		opts = registry.NewOptions()
 	}
@@ -35,11 +29,11 @@ func NewXServer(opts *registry.Options) *XServer {
 
 type XServer struct {
 	*registry.Registry
-	Caller      func(c *server.Context, pr reflect.Value, fn reflect.Value) (interface{}, error) //全局消息调用
-	Serialize   func(c *server.Context, reply interface{}) error                                 //全局消息序列化封装
-	rpcServer   *server.Server
-	rpcHandler  map[string]*Registry
-	rpcRegister rpcRegister
+	Caller     func(c *server.Context, pr reflect.Value, fn reflect.Value) (interface{}, error) //全局消息调用
+	Serialize  func(c *server.Context, reply interface{}) error                                 //全局消息序列化封装
+	rpcServer  *server.Server
+	rpcHandler map[string]*Handler
+	//rpcRegister server.RegisterPlugin
 }
 
 func (this *XServer) filter(s *registry.Service, pr, fn reflect.Value) bool {
@@ -125,7 +119,7 @@ func (this *XServer) Server() *server.Server {
 func (this *XServer) Service(name string, handlers ...interface{}) *registry.Service {
 	s := this.Registry.Service(name)
 	if len(handlers) > 0 {
-		handler := &Registry{}
+		handler := &Handler{}
 		for _, m := range handlers {
 			handler.Use(m)
 		}
@@ -134,20 +128,12 @@ func (this *XServer) Service(name string, handlers ...interface{}) *registry.Ser
 	return s
 }
 
-func (this *XServer) Start(network, address string, register rpcRegister) (err error) {
-	if err = register.Start(); err != nil {
-		return
-	}
-	defer func() {
-		if err != nil {
-			_ = register.Stop()
-		}
-	}()
+func (this *XServer) Start(network, address string, register server.RegisterPlugin) (err error) {
 	this.rpcServer.DisableHTTPGateway = true
 	for _, service := range this.Registry.Services() {
 		servicePath := service.Name()
 		var metadata []string
-		if handle, ok := this.rpcHandler[servicePath]; ok {
+		if handle := this.rpcHandler[servicePath]; handle != nil {
 			for _, f := range handle.Metadata {
 				metadata = append(metadata, f())
 			}
@@ -159,6 +145,7 @@ func (this *XServer) Start(network, address string, register rpcRegister) (err e
 			this.rpcServer.AddHandler(servicePath, serviceMethod, this.handle)
 		}
 	}
+	this.rpcServer.Plugins.Add(register)
 	err = utils.Timeout(time.Second, func() error {
 		return this.rpcServer.Serve(network, address)
 	})
@@ -170,7 +157,7 @@ func (this *XServer) Start(network, address string, register rpcRegister) (err e
 
 func (this *XServer) Close() error {
 	_ = this.rpcServer.Shutdown(nil)
-	_ = this.rpcRegister.Stop()
+	//_ = this.rpcRegister.Stop()
 	return nil
 }
 
