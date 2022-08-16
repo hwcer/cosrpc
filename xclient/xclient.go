@@ -4,20 +4,22 @@ import (
 	"context"
 	"fmt"
 	"github.com/hwcer/cosgo/logger"
-	"github.com/rpcxio/libkv/store"
 	rpcx "github.com/smallnest/rpcx/client"
 	"sync/atomic"
 )
 
-func NewXClient() *XClient {
+type Discovery func(servicePath string) (rpcx.ServiceDiscovery, error)
+
+func NewXClient(discovery Discovery) *XClient {
 	return &XClient{
-		clients: make(map[string]*Options),
+		clients:   make(map[string]*Options),
+		Discovery: discovery,
 	}
 }
 
 type Options struct {
 	client    rpcx.XClient
-	options   *rpcx.Option
+	option    *rpcx.Option
 	selector  rpcx.Selector
 	selectMod rpcx.SelectMode
 	discovery rpcx.ServiceDiscovery
@@ -27,7 +29,7 @@ type Options struct {
 type XClient struct {
 	start     int32
 	clients   map[string]*Options
-	discovery rpcx.ServiceDiscovery
+	Discovery Discovery
 }
 
 // AddServicePath 观察服务器信息
@@ -47,22 +49,25 @@ func (this *XClient) AddServicePath(servicePath string, selector interface{}) *r
 		logger.Fatal("XClient AddServicePath arg(Selector) type error:%v", selector)
 	}
 	r := rpcx.DefaultOption
-	opts.options = &r
+	opts.option = &r
 	opts.FailMode = rpcx.Failtry
-	return opts.options
+	return opts.option
 }
 
-func (this *XClient) Start(discovery rpcx.ServiceDiscovery) (err error) {
+func (this *XClient) Start() (err error) {
 	if !atomic.CompareAndSwapInt32(&this.start, 0, 1) {
 		return
 	}
 	if len(this.clients) == 0 {
 		return
 	}
-	this.discovery = discovery
-	for k, _ := range this.clients {
-		if err = this.create(k); err != nil {
+	for servicePath, client := range this.clients {
+		if client.discovery, err = this.Discovery(servicePath); err != nil {
 			return
+		}
+		client.client = rpcx.NewXClient(servicePath, client.FailMode, client.selectMod, client.discovery, *client.option)
+		if client.selectMod == rpcx.SelectByUser {
+			client.client.SetSelector(client.selector)
 		}
 	}
 	return
@@ -76,22 +81,9 @@ func (this *XClient) Close() (errs []error) {
 		}
 		c.discovery.Close()
 	}
-	this.discovery.Close()
 	return nil
 }
 
-func (this *XClient) create(servicePath string) (err error) {
-	c := this.clients[servicePath]
-	c.discovery = this.discovery
-	if c.discovery, err = this.discovery.Clone(servicePath); err != nil && err != store.ErrKeyNotFound {
-		return
-	}
-	c.client = rpcx.NewXClient(servicePath, c.FailMode, c.selectMod, c.discovery, *c.options)
-	if c.selectMod == rpcx.SelectByUser {
-		c.client.SetSelector(c.selector)
-	}
-	return
-}
 func (this *XClient) Has(servicePath string) bool {
 	if _, ok := this.clients[servicePath]; ok {
 		return true
