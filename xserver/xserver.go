@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/hwcer/cosgo/utils"
+	_ "github.com/hwcer/cosrpc/logger"
 	"github.com/hwcer/registry"
 	"github.com/smallnest/rpcx/server"
 	"reflect"

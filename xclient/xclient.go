@@ -4,54 +4,45 @@ import (
 	"context"
 	"fmt"
 	"github.com/hwcer/cosgo/logger"
-	rpcx "github.com/smallnest/rpcx/client"
+	_ "github.com/hwcer/cosrpc/logger"
+	"github.com/smallnest/rpcx/client"
 	"sync/atomic"
 )
 
-type Discovery func(servicePath string) (rpcx.ServiceDiscovery, error)
+type Discovery func(servicePath string) (client.ServiceDiscovery, error)
 
 func NewXClient(discovery Discovery) *XClient {
 	return &XClient{
-		clients:   make(map[string]*Options),
+		clients:   make(map[string]*Client),
 		Discovery: discovery,
 	}
 }
 
-type Options struct {
-	client    rpcx.XClient
-	option    *rpcx.Option
-	selector  rpcx.Selector
-	selectMod rpcx.SelectMode
-	discovery rpcx.ServiceDiscovery
-	FailMode  rpcx.FailMode
+type Client struct {
+	client    client.XClient
+	Option    client.Option
+	FailMode  client.FailMode
+	Selector  interface{} //client.Selector OR client.SelectMode
+	Discovery client.ServiceDiscovery
 }
 
 type XClient struct {
 	start     int32
-	clients   map[string]*Options
+	clients   map[string]*Client
 	Discovery Discovery
 }
 
 // AddServicePath 观察服务器信息
-func (this *XClient) AddServicePath(servicePath string, selector interface{}) *rpcx.Option {
+func (this *XClient) AddServicePath(servicePath string, selector interface{}) *Client {
 	if atomic.LoadInt32(&this.start) > 0 {
 		logger.Fatal("Client已经启动无法再添加Service")
 	}
-	opts := &Options{}
-	this.clients[servicePath] = opts
-	switch selector.(type) {
-	case rpcx.Selector:
-		opts.selector = selector.(rpcx.Selector)
-		opts.selectMod = rpcx.SelectByUser
-	case rpcx.SelectMode:
-		opts.selectMod = selector.(rpcx.SelectMode)
-	default:
-		logger.Fatal("XClient AddServicePath arg(Selector) type error:%v", selector)
-	}
-	r := rpcx.DefaultOption
-	opts.option = &r
-	opts.FailMode = rpcx.Failtry
-	return opts.option
+	c := &Client{}
+	this.clients[servicePath] = c
+	c.Option = client.DefaultOption
+	c.FailMode = client.Failtry
+	c.Selector = selector
+	return c
 }
 
 func (this *XClient) Start() (err error) {
@@ -61,13 +52,27 @@ func (this *XClient) Start() (err error) {
 	if len(this.clients) == 0 {
 		return
 	}
-	for servicePath, client := range this.clients {
-		if client.discovery, err = this.Discovery(servicePath); err != nil {
-			return
+	for servicePath, c := range this.clients {
+		if c.Discovery == nil {
+			if c.Discovery, err = this.Discovery(servicePath); err != nil {
+				return
+			}
 		}
-		client.client = rpcx.NewXClient(servicePath, client.FailMode, client.selectMod, client.discovery, *client.option)
-		if client.selectMod == rpcx.SelectByUser {
-			client.client.SetSelector(client.selector)
+		var selector client.Selector
+		var selectMod client.SelectMode
+		switch c.Selector.(type) {
+		case client.Selector:
+			selector = c.Selector.(client.Selector)
+			selectMod = client.SelectByUser
+		case client.SelectMode:
+			selectMod = c.Selector.(client.SelectMode)
+		default:
+			logger.Fatal("XClient AddServicePath arg(Selector) type error:%v", selector)
+		}
+
+		c.client = client.NewXClient(servicePath, c.FailMode, selectMod, c.Discovery, c.Option)
+		if selectMod == client.SelectByUser && selector != nil {
+			c.client.SetSelector(selector)
 		}
 	}
 	return
@@ -79,7 +84,7 @@ func (this *XClient) Close() (errs []error) {
 		if err = c.client.Close(); err != nil {
 			errs = append(errs, err)
 		}
-		c.discovery.Close()
+		c.Discovery.Close()
 	}
 	return nil
 }
@@ -96,7 +101,7 @@ func (this *XClient) Size() int {
 	return len(this.clients)
 }
 
-func (this *XClient) Client(servicePath string) rpcx.XClient {
+func (this *XClient) Client(servicePath string) client.XClient {
 	if v, ok := this.clients[servicePath]; ok {
 		return v.client
 	} else {
