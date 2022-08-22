@@ -3,22 +3,21 @@ package xserver
 import (
 	"github.com/hwcer/registry"
 	"github.com/smallnest/rpcx/server"
-	"reflect"
 )
 
-type RegistryFilter func(s *registry.Service, pr, fn reflect.Value) bool
-type RegistryCaller func(c *server.Context, pr reflect.Value, fn reflect.Value) (interface{}, error)
+type RegistryFilter func(s *registry.Service, node *registry.Node) bool
+type RegistryCaller func(c *server.Context, node *registry.Node) (interface{}, error)
 type RegistryMetadata func() string
 type RegistrySerialize func(c *server.Context, reply interface{}) error
 
 type registryInterface interface {
-	Caller(c *server.Context, fn reflect.Value) interface{}
+	Caller(c *server.Context, node *registry.Node) interface{}
 }
 type registryFilterHandle interface {
-	Filter(s *registry.Service, pr, fn reflect.Value) bool
+	Filter(s *registry.Service, node *registry.Node) bool
 }
 type registryCallerHandle interface {
-	Caller(c *server.Context, pr reflect.Value, fn reflect.Value) (interface{}, error)
+	Caller(c *server.Context, node *registry.Node) (interface{}, error)
 }
 type registryMetadataHandle interface {
 	Metadata() string
@@ -28,10 +27,10 @@ type registrySerializeHandle interface {
 }
 
 type Handler struct {
-	Filter    func(s *registry.Service, pr, fn reflect.Value) bool                             // 接口过滤
-	Caller    func(c *server.Context, pr reflect.Value, fn reflect.Value) (interface{}, error) //消息调用
-	Metadata  []func() string                                                                  //获取metadata
-	Serialize func(c *server.Context, reply interface{}) error                                 //消息序列化封装
+	Filter    func(s *registry.Service, node *registry.Node) bool               // 接口过滤
+	Caller    func(c *server.Context, node *registry.Node) (interface{}, error) //消息调用
+	Metadata  []func() string                                                   //获取metadata
+	Serialize func(c *server.Context, reply interface{}) error                  //消息序列化封装
 }
 
 func (this *Handler) Copy(src *Handler) {

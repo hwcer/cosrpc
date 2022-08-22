@@ -8,7 +8,6 @@ import (
 	_ "github.com/hwcer/cosrpc/logger"
 	"github.com/hwcer/registry"
 	"github.com/smallnest/rpcx/server"
-	"reflect"
 	"strings"
 	"time"
 )
@@ -30,22 +29,23 @@ func NewXServer(opts *registry.Options) *XServer {
 
 type XServer struct {
 	*registry.Registry
-	Caller     func(c *server.Context, pr reflect.Value, fn reflect.Value) (interface{}, error) //全局消息调用
-	Serialize  func(c *server.Context, reply interface{}) error                                 //全局消息序列化封装
+	Caller     func(c *server.Context, node *registry.Node) (interface{}, error) //全局消息调用
+	Serialize  func(c *server.Context, reply interface{}) error                  //全局消息序列化封装
 	rpcServer  *server.Server
 	rpcHandler map[string]*Handler
 	//rpcRegister server.RegisterPlugin
 }
 
-func (this *XServer) filter(s *registry.Service, pr, fn reflect.Value) bool {
+func (this *XServer) filter(s *registry.Service, node *registry.Node) bool {
 	handler := this.rpcHandler[s.Name()]
 	if handler != nil && handler.Filter != nil {
-		return handler.Filter(s, pr, fn)
+		return handler.Filter(s, node)
 	}
-	if !pr.IsValid() {
-		_, ok := fn.Interface().(func(*server.Context) interface{})
+	if !node.IsFunc() {
+		_, ok := node.Method().(func(*server.Context) interface{})
 		return ok
 	}
+	fn := node.Value()
 	t := fn.Type()
 	if t.NumIn() != 2 {
 		return false
@@ -73,7 +73,7 @@ func (this *XServer) handle(sc *server.Context) (err error) {
 	if !ok {
 		return errors.New("ServicePath not exist")
 	}
-	pr, fn, ok := service.Match(urlPath)
+	node, ok := service.Match(urlPath)
 	if !ok {
 		return errors.New("ServiceMethod not exist")
 	}
@@ -81,11 +81,11 @@ func (this *XServer) handle(sc *server.Context) (err error) {
 
 	var reply interface{}
 	if handler != nil && handler.Caller != nil {
-		reply, err = handler.Caller(sc, pr, fn)
+		reply, err = handler.Caller(sc, node)
 	} else if this.Caller != nil {
-		reply, err = this.Caller(sc, pr, fn)
+		reply, err = this.Caller(sc, node)
 	} else {
-		reply, err = this.caller(sc, pr, fn)
+		reply, err = this.caller(sc, node)
 	}
 	if err != nil {
 		return
@@ -100,14 +100,14 @@ func (this *XServer) handle(sc *server.Context) (err error) {
 	}
 }
 
-func (this *XServer) caller(c *server.Context, pr, fn reflect.Value) (reply interface{}, err error) {
-	if !pr.IsValid() {
-		f, _ := fn.Interface().(func(c *server.Context) interface{})
+func (this *XServer) caller(c *server.Context, node *registry.Node) (reply interface{}, err error) {
+	if node.IsFunc() {
+		f, _ := node.Method().(func(c *server.Context) interface{})
 		reply = f(c)
-	} else if s, ok := pr.Interface().(registryInterface); ok {
-		reply = s.Caller(c, fn)
+	} else if s, ok := node.Binder().(registryInterface); ok {
+		reply = s.Caller(c, node)
 	} else {
-		ret := fn.Call([]reflect.Value{pr, reflect.ValueOf(c)})
+		ret := node.Call(c)
 		reply = ret[0].Interface()
 	}
 	return
