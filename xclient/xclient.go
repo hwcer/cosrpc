@@ -3,8 +3,8 @@ package xclient
 import (
 	"context"
 	"fmt"
-	"github.com/hwcer/cosgo/logger"
 	_ "github.com/hwcer/cosrpc/logger"
+	"github.com/hwcer/logger"
 	"github.com/smallnest/rpcx/client"
 	"sync/atomic"
 )
