@@ -14,6 +14,12 @@ import (
 
 // 通过registry集中注册对象
 
+type Register interface {
+	server.RegisterPlugin
+	Stop() error
+	Start() error
+}
+
 func NewXServer(opts *registry.Options) *XServer {
 	r := &XServer{rpcHandler: make(map[string]*Handler)}
 	if opts == nil {
@@ -29,11 +35,11 @@ func NewXServer(opts *registry.Options) *XServer {
 
 type XServer struct {
 	*registry.Registry
-	Caller     func(c *server.Context, node *registry.Node) (interface{}, error) //全局消息调用
-	Serialize  func(c *server.Context, reply interface{}) error                  //全局消息序列化封装
-	rpcServer  *server.Server
-	rpcHandler map[string]*Handler
-	//rpcRegister server.RegisterPlugin
+	Caller      func(c *server.Context, node *registry.Node) (interface{}, error) //全局消息调用
+	Serialize   func(c *server.Context, reply interface{}) error                  //全局消息序列化封装
+	rpcServer   *server.Server
+	rpcHandler  map[string]*Handler
+	rpcRegister Register
 }
 
 func (this *XServer) filter(s *registry.Service, node *registry.Node) bool {
@@ -129,19 +135,11 @@ func (this *XServer) Service(name string, handlers ...interface{}) *registry.Ser
 	return s
 }
 
-func (this *XServer) Start(network, address string, register server.RegisterPlugin) (err error) {
+func (this *XServer) Start(network, address string, register Register) (err error) {
 	this.rpcServer.DisableHTTPGateway = true
+	//启动服务
 	for _, service := range this.Registry.Services() {
 		servicePath := service.Name()
-		var metadata []string
-		if handle := this.rpcHandler[servicePath]; handle != nil {
-			for _, f := range handle.Metadata {
-				metadata = append(metadata, f())
-			}
-		}
-		if err = register.Register(servicePath, nil, strings.Join(metadata, "&")); err != nil {
-			return
-		}
 		for _, serviceMethod := range service.Paths() {
 			this.rpcServer.AddHandler(servicePath, serviceMethod, this.handle)
 		}
@@ -153,12 +151,33 @@ func (this *XServer) Start(network, address string, register server.RegisterPlug
 	if err == utils.ErrorTimeout {
 		err = nil
 	}
+	if err != nil {
+		return
+	}
+	//注册服务
+	for _, service := range this.Registry.Services() {
+		servicePath := service.Name()
+		var metadata []string
+		if handle := this.rpcHandler[servicePath]; handle != nil {
+			for _, f := range handle.Metadata {
+				metadata = append(metadata, f())
+			}
+		}
+		if err = register.Register(servicePath, nil, strings.Join(metadata, "&")); err != nil {
+			return
+		}
+	}
+	if err = register.Start(); err != nil {
+		_ = this.rpcServer.Shutdown(nil)
+		return err
+	}
+	this.rpcRegister = register
 	return
 }
 
 func (this *XServer) Close() error {
 	_ = this.rpcServer.Shutdown(nil)
-	//_ = this.rpcRegister.Stop()
+	_ = this.rpcRegister.Stop()
 	return nil
 }
 
