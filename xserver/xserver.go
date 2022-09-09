@@ -21,7 +21,7 @@ type Register interface {
 }
 
 func NewXServer(opts *registry.Options) *XServer {
-	r := &XServer{rpcHandler: make(map[string]*Handler)}
+	r := &XServer{rpcService: make(map[string]*Service)}
 	if opts == nil {
 		opts = registry.NewOptions()
 	}
@@ -38,12 +38,12 @@ type XServer struct {
 	Caller      func(c *server.Context, node *registry.Node) (interface{}, error) //全局消息调用
 	Serialize   func(c *server.Context, reply interface{}) error                  //全局消息序列化封装
 	rpcServer   *server.Server
-	rpcHandler  map[string]*Handler
+	rpcService  map[string]*Service
 	rpcRegister Register
 }
 
 func (this *XServer) filter(s *registry.Service, node *registry.Node) bool {
-	handler := this.rpcHandler[s.Name()]
+	handler := this.rpcService[s.Name()]
 	if handler != nil && handler.Filter != nil {
 		return handler.Filter(s, node)
 	}
@@ -83,7 +83,7 @@ func (this *XServer) handle(sc *server.Context) (err error) {
 	if !ok {
 		return errors.New("ServiceMethod not exist")
 	}
-	handler := this.rpcHandler[service.Name()]
+	handler := this.rpcService[service.Name()]
 
 	var reply interface{}
 	if handler != nil && handler.Caller != nil {
@@ -126,11 +126,11 @@ func (this *XServer) Server() *server.Server {
 func (this *XServer) Service(name string, handlers ...interface{}) *registry.Service {
 	s := this.Registry.Service(name)
 	if len(handlers) > 0 {
-		handler := &Handler{}
+		handler := &Service{}
 		for _, m := range handlers {
 			handler.Use(m)
 		}
-		this.rpcHandler[s.Name()] = handler
+		this.rpcService[s.Name()] = handler
 	}
 	return s
 }
@@ -158,7 +158,7 @@ func (this *XServer) Start(network, address string, register Register) (err erro
 	for _, service := range this.Registry.Services() {
 		servicePath := service.Name()
 		var metadata []string
-		if handle := this.rpcHandler[servicePath]; handle != nil {
+		if handle := this.rpcService[servicePath]; handle != nil {
 			for _, f := range handle.Metadata {
 				metadata = append(metadata, f())
 			}

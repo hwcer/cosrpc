@@ -116,7 +116,7 @@ func (this *XClient) Call(ctx context.Context, servicePath, serviceMethod string
 	if c := this.Client(servicePath); c != nil {
 		return c.Call(ctx, serviceMethod, args, reply)
 	} else {
-		return fmt.Errorf("服务不存在")
+		return client.ErrXClientNoServer
 	}
 }
 

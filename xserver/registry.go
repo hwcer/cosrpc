@@ -26,29 +26,14 @@ type registrySerializeHandle interface {
 	Serialize(c *server.Context, reply interface{}) error
 }
 
-type Handler struct {
+type Service struct {
 	Filter    func(s *registry.Service, node *registry.Node) bool               // 接口过滤
 	Caller    func(c *server.Context, node *registry.Node) (interface{}, error) //消息调用
 	Metadata  []func() string                                                   //获取metadata
 	Serialize func(c *server.Context, reply interface{}) error                  //消息序列化封装
 }
 
-func (this *Handler) Copy(src *Handler) {
-	if src.Filter != nil {
-		this.Filter = src.Filter
-	}
-	if src.Caller != nil {
-		this.Caller = src.Caller
-	}
-	if src.Serialize != nil {
-		this.Serialize = src.Serialize
-	}
-	if src.Metadata != nil {
-		this.Metadata = append(this.Metadata, src.Metadata...)
-	}
-}
-
-func (this *Handler) Use(src interface{}) {
+func (this *Service) Use(src interface{}) {
 	if v, ok := src.(RegistryFilter); ok {
 		this.Filter = v
 	}
