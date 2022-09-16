@@ -1,11 +1,15 @@
-package xclient
+package cosrpc
 
 import (
 	"context"
+	"encoding/json"
+	"errors"
 	"fmt"
-	_ "github.com/hwcer/cosrpc/logger"
+	"github.com/hwcer/cosgo/message"
 	"github.com/hwcer/logger"
 	"github.com/smallnest/rpcx/client"
+	"github.com/smallnest/rpcx/protocol"
+	"reflect"
 	"sync/atomic"
 )
 
@@ -42,6 +46,7 @@ func (this *XClient) AddServicePath(servicePath string, selector interface{}) *C
 	c.Option = client.DefaultOption
 	c.FailMode = client.Failtry
 	c.Selector = selector
+	c.Option.SerializeType = protocol.SerializeNone
 	return c
 }
 
@@ -129,4 +134,43 @@ func (this *XClient) Broadcast(ctx context.Context, servicePath, serviceMethod s
 	} else {
 		return fmt.Errorf("服务不存在")
 	}
+}
+
+// XCall 使用默认的message发起请求
+func (this *XClient) XCall(ctx context.Context, servicePath, serviceMethod string, args interface{}, reply interface{}) error {
+	if reply != nil && reflect.TypeOf(reply).Kind() != reflect.Ptr {
+		return errors.New("client.call reply must pointer")
+	}
+	var err error
+	var data []byte
+	if v, ok := args.([]byte); ok {
+		data = v
+	} else {
+		data, err = json.Marshal(args)
+	}
+	if err != nil {
+		return err
+	}
+	if _, ok := reply.(*[]byte); ok || reply == nil {
+		if err = this.Call(ctx, servicePath, serviceMethod, data, reply); err != nil {
+			return ParseError(err)
+		} else {
+			return nil
+		}
+	}
+	v := make([]byte, 0)
+	err = this.Call(ctx, servicePath, serviceMethod, data, &v)
+	if err != nil {
+		return ParseError(err)
+	}
+
+	msg := message.New()
+	err = json.Unmarshal(v, msg)
+	if err != nil {
+		return err
+	}
+	if msg.Code != 0 {
+		return msg
+	}
+	return msg.Unmarshal(reply)
 }

@@ -1,7 +1,7 @@
-package xserver
+package cosrpc
 
 import (
-	"encoding/json"
+	"github.com/hwcer/cosgo/binding"
 	"github.com/hwcer/cosgo/message"
 	"github.com/hwcer/cosgo/values"
 	"github.com/hwcer/logger"
@@ -9,6 +9,8 @@ import (
 	"github.com/smallnest/rpcx/share"
 	"sync"
 )
+
+const ContextMimeTypeName = "_cosrpc_context_mime_type"
 
 var pool sync.Pool
 
@@ -25,22 +27,35 @@ type Context struct {
 	body values.Values
 }
 
-func (this *Context) reset(s *server.Context) error {
+func (this *Context) Reset(s *server.Context) error {
 	this.Context = s
 	return nil
 }
 
-func (this *Context) release() {
+func (this *Context) Release() {
 	this.body = nil
 	this.Context = nil
 }
 
+func (this *Context) SetMimeType(t string) {
+	this.Context.SetValue(ContextMimeTypeName, t)
+}
+func (this *Context) GetMimeType() (r string) {
+	v := this.Context.Get(ContextMimeTypeName)
+	r, _ = v.(string)
+	return
+}
 func (this *Context) Bind(i interface{}) error {
 	data := this.Context.Payload()
 	if len(data) == 0 {
 		return nil
 	}
-	return json.Unmarshal(data, i)
+	mimeType := this.GetMimeType()
+	if mimeType != "" {
+		return binding.Unmarshal(data, i, mimeType)
+	} else {
+		return binding.Unmarshal(data, i, binding.MIMEJSON)
+	}
 }
 
 func (this *Context) Error(err interface{}) *message.Message {

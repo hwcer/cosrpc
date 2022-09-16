@@ -3,8 +3,10 @@ module github.com/hwcer/cosrpc
 go 1.16
 
 replace (
-	github.com/hwcer/cosgo v0.0.1 => ../cosgo
+github.com/hwcer/cosgo v0.0.1 => ../cosgo
+github.com/hwcer/registry v0.0.1 => ../registry
 )
+
 require (
 	github.com/hwcer/cosgo v0.0.1
 	github.com/hwcer/logger v0.0.1
