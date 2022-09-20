@@ -7,35 +7,34 @@ import (
 	"github.com/hwcer/logger"
 	"github.com/smallnest/rpcx/server"
 	"github.com/smallnest/rpcx/share"
-	"sync"
 )
 
 const ContextMimeTypeName = "_cosrpc_context_mime_type"
 
-var pool sync.Pool
-
-func init() {
-	pool = sync.Pool{}
-	pool.New = func() interface{} {
-		c := &Context{}
-		return c
-	}
-}
+//var pool sync.Pool
+//
+//func init() {
+//	pool = sync.Pool{}
+//	pool.New = func() interface{} {
+//		c := &Context{}
+//		return c
+//	}
+//}
 
 type Context struct {
 	*server.Context
 	body values.Values
 }
 
-func (this *Context) Reset(s *server.Context) error {
-	this.Context = s
-	return nil
-}
-
-func (this *Context) Release() {
-	this.body = nil
-	this.Context = nil
-}
+//func (this *Context) Reset(s *server.Context) error {
+//	this.Context = s
+//	return nil
+//}
+//
+//func (this *Context) Release() {
+//	this.body = nil
+//	this.Context = nil
+//}
 
 func (this *Context) SetMimeType(t string) {
 	this.Context.SetValue(ContextMimeTypeName, t)

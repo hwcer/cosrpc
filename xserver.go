@@ -37,7 +37,7 @@ type XServer struct {
 }
 
 // handle services入口
-func (this *XServer) handle(sc *server.Context) (err error) {
+func (this *XServer) handle(sc *server.Context) error {
 	defer func() {
 		if r := recover(); r != nil {
 			logger.Info("rpcx server recover error:%v\n%v", r, string(debug.Stack()))
@@ -54,11 +54,12 @@ func (this *XServer) handle(sc *server.Context) (err error) {
 	if !ok {
 		return errors.New("handler unknown")
 	}
-	reply, err := handler.Caller(sc, node)
+	c := &Context{Context: sc}
+	reply, err := handler.Caller(node, c)
 	if err != nil {
-		return
+		return err
 	}
-	return handler.Serialize(sc, reply)
+	return handler.Serialize(c, reply)
 }
 
 func (this *XServer) Server() *server.Server {

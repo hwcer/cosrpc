@@ -6,19 +6,18 @@ import (
 	"github.com/hwcer/cosgo/message"
 	"github.com/hwcer/logger"
 	"github.com/hwcer/registry"
-	"github.com/smallnest/rpcx/server"
 	"reflect"
 	"runtime/debug"
 	"strings"
 )
 
+type HandlerCaller func(node *registry.Node, c *Context) (interface{}, error)
+type HandlerMetadata func() string
+type HandlerSerialize func(c *Context, reply interface{}) error
+
 type handleCaller interface {
 	Caller(node *registry.Node, c *Context) interface{}
 }
-
-type HandlerCaller func(node *registry.Node, c *server.Context) (interface{}, error)
-type HandlerMetadata func() string
-type HandlerSerialize func(c *server.Context, reply interface{}) error
 
 type Handler struct {
 	caller    HandlerCaller
@@ -57,14 +56,8 @@ func (this *Handler) Filter(node *registry.Node) bool {
 	}
 }
 
-func (this *Handler) Caller(c *server.Context, node *registry.Node) (reply interface{}, err error) {
-	if this.caller != nil {
-		return this.caller(node, c)
-	}
-	p := pool.Get().(*Context)
+func (this *Handler) Caller(node *registry.Node, c *Context) (reply interface{}, err error) {
 	defer func() {
-		p.Release()
-		pool.Put(p)
 		if v := recover(); v != nil {
 			if cosgo.Debug() {
 				reply = message.Errorf(500, v)
@@ -74,22 +67,19 @@ func (this *Handler) Caller(c *server.Context, node *registry.Node) (reply inter
 			logger.Info("rpc server recover error:%v\n%v", v, string(debug.Stack()))
 		}
 	}()
-	err = p.Reset(c)
-	if err != nil {
-		return nil, err
+	if this.caller != nil {
+		return this.caller(node, c)
 	}
-
-	var v interface{}
 	if node.IsFunc() {
 		m := node.Method().(func(*Context) interface{})
-		v = m(p)
+		reply = m(c)
 	} else if s, ok := node.Method().(handleCaller); ok {
-		v = s.Caller(node, p)
+		reply = s.Caller(node, c)
 	} else {
-		r := node.Call(p)
-		v = r[0].Interface()
+		r := node.Call(c)
+		reply = r[0].Interface()
 	}
-	return v, nil
+	return
 }
 
 func (this *Handler) Metadata() string {
@@ -100,7 +90,7 @@ func (this *Handler) Metadata() string {
 	return strings.Join(arr, "&")
 }
 
-func (this *Handler) Serialize(c *server.Context, reply interface{}) (err error) {
+func (this *Handler) Serialize(c *Context, reply interface{}) (err error) {
 	if this.serialize != nil {
 		return this.serialize(c, reply)
 	}
