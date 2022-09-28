@@ -13,9 +13,7 @@ import (
 	"sync/atomic"
 )
 
-type Discovery func(servicePath string) (client.ServiceDiscovery, error)
-
-func NewXClient(discovery Discovery) *XClient {
+func NewXClient(discovery client.ServiceDiscovery) *XClient {
 	return &XClient{
 		clients:   make(map[string]*Client),
 		Discovery: discovery,
@@ -33,7 +31,7 @@ type Client struct {
 type XClient struct {
 	start     int32
 	clients   map[string]*Client
-	Discovery Discovery
+	Discovery client.ServiceDiscovery
 }
 
 // AddServicePath 观察服务器信息
@@ -58,10 +56,11 @@ func (this *XClient) Start() (err error) {
 		return
 	}
 	for servicePath, c := range this.clients {
-		if c.Discovery == nil {
-			if c.Discovery, err = this.Discovery(servicePath); err != nil {
-				return
-			}
+		var discovery client.ServiceDiscovery
+		if c.Discovery != nil {
+			discovery = c.Discovery
+		} else {
+			discovery = this.Discovery
 		}
 		var selector client.Selector
 		var selectMod client.SelectMode
@@ -75,7 +74,7 @@ func (this *XClient) Start() (err error) {
 			logger.Fatal("XClient AddServicePath arg(Selector) type error:%v", selector)
 		}
 
-		c.client = client.NewXClient(servicePath, c.FailMode, selectMod, c.Discovery, c.Option)
+		c.client = client.NewXClient(servicePath, c.FailMode, selectMod, discovery, c.Option)
 		if selectMod == client.SelectByUser && selector != nil {
 			c.client.SetSelector(selector)
 		}
@@ -88,8 +87,13 @@ func (this *XClient) Close() (errs []error) {
 	for _, c := range this.clients {
 		if err = c.client.Close(); err != nil {
 			errs = append(errs, err)
+			if c.Discovery != nil {
+				c.Discovery.Close()
+			}
 		}
-		c.Discovery.Close()
+	}
+	if this.Discovery != nil {
+		this.Discovery.Close()
 	}
 	return nil
 }
