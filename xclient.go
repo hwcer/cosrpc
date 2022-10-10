@@ -6,11 +6,10 @@ import (
 	"errors"
 	"fmt"
 	"github.com/hwcer/cosgo/message"
-	"github.com/hwcer/logger"
 	"github.com/smallnest/rpcx/client"
 	"github.com/smallnest/rpcx/protocol"
 	"reflect"
-	"sync/atomic"
+	"sync"
 )
 
 func NewXClient(discovery client.ServiceDiscovery) *XClient {
@@ -20,66 +19,58 @@ func NewXClient(discovery client.ServiceDiscovery) *XClient {
 	}
 }
 
-type Client struct {
-	client    client.XClient
-	Option    client.Option
-	FailMode  client.FailMode
-	Selector  interface{} //client.Selector OR client.SelectMode
-	Discovery client.ServiceDiscovery
-}
-
 type XClient struct {
-	start     int32
+	sync.Mutex
+	started   bool
 	clients   map[string]*Client
 	Discovery client.ServiceDiscovery
 }
 
 // AddServicePath 观察服务器信息
-func (this *XClient) AddServicePath(servicePath string, selector interface{}) *Client {
-	if atomic.LoadInt32(&this.start) > 0 {
-		logger.Fatal("Client已经启动无法再添加Service")
-	}
-	c := &Client{}
-	this.clients[servicePath] = c
+func (this *XClient) AddServicePath(servicePath string, selector interface{}) (c *Client, err error) {
+	c = &Client{}
 	c.Option = client.DefaultOption
 	c.FailMode = client.Failtry
 	c.Selector = selector
+	c.ServicePath = servicePath
 	c.Option.SerializeType = protocol.SerializeNone
-	return c
+	this.Mutex.Lock()
+	defer this.Mutex.Unlock()
+	if !this.started {
+		this.clients[servicePath] = c
+		return
+	}
+	if err = c.Start(this.Discovery); err != nil {
+		return
+	}
+	exist := this.clients[servicePath]
+	clients := make(map[string]*Client)
+	for k, v := range this.clients {
+		clients[k] = v
+	}
+	clients[servicePath] = c
+	this.clients = clients
+
+	if exist != nil {
+		_ = exist.client.Close()
+	}
+
+	return
 }
 
 func (this *XClient) Start() (err error) {
-	if !atomic.CompareAndSwapInt32(&this.start, 0, 1) {
-		return
+	this.Mutex.Lock()
+	defer this.Mutex.Unlock()
+	if this.started {
+		return nil
 	}
-	if len(this.clients) == 0 {
-		return
-	}
-	for servicePath, c := range this.clients {
-		var discovery client.ServiceDiscovery
-		if c.Discovery != nil {
-			discovery = c.Discovery
-		} else {
-			discovery = this.Discovery
-		}
-		var selector client.Selector
-		var selectMod client.SelectMode
-		switch c.Selector.(type) {
-		case client.Selector:
-			selector = c.Selector.(client.Selector)
-			selectMod = client.SelectByUser
-		case client.SelectMode:
-			selectMod = c.Selector.(client.SelectMode)
-		default:
-			logger.Fatal("XClient AddServicePath arg(Selector) type error:%v", selector)
-		}
-
-		c.client = client.NewXClient(servicePath, c.FailMode, selectMod, discovery, c.Option)
-		if selectMod == client.SelectByUser && selector != nil {
-			c.client.SetSelector(selector)
+	this.started = true
+	for _, c := range this.clients {
+		if err = c.Start(this.Discovery); err != nil {
+			return
 		}
 	}
-	return
+	return nil
 }
 
 func (this *XClient) Close() (errs []error) {
