@@ -1,7 +1,7 @@
 package cosrpc
 
 import (
-	"github.com/hwcer/cosgo/binding"
+	"github.com/hwcer/cosgo/binder"
 	"github.com/hwcer/cosgo/message"
 	"github.com/hwcer/cosgo/values"
 	"github.com/hwcer/logger"
@@ -9,52 +9,40 @@ import (
 	"github.com/smallnest/rpcx/share"
 )
 
-const ContextMimeTypeName = "_cosrpc_context_mime_type"
-
-//var pool sync.Pool
-//
-//func init() {
-//	pool = sync.Pool{}
-//	pool.New = func() interface{} {
-//		c := &Context{}
-//		return c
-//	}
-//}
+const (
+	ContextEncodingTypeName  = "_binding_encoding_type"
+	ContextEncodingTypeValue = binder.EncodingTypeJson
+)
 
 type Context struct {
 	*server.Context
 	body values.Values
 }
 
-//func (this *Context) Reset(s *server.Context) error {
-//	this.Context = s
-//	return nil
-//}
-//
-//func (this *Context) Release() {
-//	this.body = nil
-//	this.Context = nil
-//}
+func (this *Context) SetBinder(t binder.EncodingType) {
+	this.Context.SetValue(ContextEncodingTypeName, t)
+}
+func (this *Context) GetBinder() (r binder.Interface) {
+	v := this.Context.Get(ContextEncodingTypeName)
+	if v == nil {
+		v = ContextEncodingTypeValue
+	}
+	t, ok := v.(binder.EncodingType)
+	if !ok {
+		return
+	}
+	return binder.Handle(t)
+}
 
-func (this *Context) SetMimeType(t string) {
-	this.Context.SetValue(ContextMimeTypeName, t)
-}
-func (this *Context) GetMimeType() (r string) {
-	v := this.Context.Get(ContextMimeTypeName)
-	r, _ = v.(string)
-	return
-}
 func (this *Context) Bind(i interface{}) error {
 	data := this.Context.Payload()
 	if len(data) == 0 {
 		return nil
 	}
-	mimeType := this.GetMimeType()
-	if mimeType != "" {
-		return binding.Unmarshal(data, i, mimeType)
-	} else {
-		return binding.Unmarshal(data, i, binding.MIMEJSON)
+	if binder := this.GetBinder(); binder != nil {
+		return binder.Unmarshal(data, i)
 	}
+	return nil
 }
 
 func (this *Context) Error(err interface{}) *message.Message {
