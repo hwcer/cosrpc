@@ -59,7 +59,12 @@ func (this *XServer) handle(sc *server.Context) error {
 	if err != nil {
 		return err
 	}
-	return handler.Serialize(c, reply)
+	var b []byte
+	if b, err = handler.Serialize(c, reply); err != nil {
+		return err
+	} else {
+		return c.Write(b)
+	}
 }
 
 func (this *XServer) Server() *server.Server {

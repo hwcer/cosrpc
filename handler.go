@@ -1,7 +1,7 @@
 package cosrpc
 
 import (
-	"encoding/json"
+	"fmt"
 	"github.com/hwcer/cosgo"
 	"github.com/hwcer/cosgo/message"
 	"github.com/hwcer/logger"
@@ -13,7 +13,7 @@ import (
 
 type HandlerCaller func(node *registry.Node, c *Context) (interface{}, error)
 type HandlerMetadata func() string
-type HandlerSerialize func(c *Context, reply interface{}) error
+type HandlerSerialize func(c *Context, reply interface{}) ([]byte, error)
 
 type handleCaller interface {
 	Caller(node *registry.Node, c *Context) interface{}
@@ -90,17 +90,16 @@ func (this *Handler) Metadata() string {
 	return strings.Join(arr, "&")
 }
 
-func (this *Handler) Serialize(c *Context, reply interface{}) (err error) {
+func (this *Handler) Serialize(c *Context, reply interface{}) ([]byte, error) {
+	if b, ok := reply.([]byte); ok {
+		return b, nil
+	}
 	if this.serialize != nil {
 		return this.serialize(c, reply)
 	}
-	b, ok := reply.([]byte)
-	if ok {
-		return c.Write(b)
+	bind := c.GetBinder()
+	if bind == nil {
+		return nil, fmt.Errorf("binder not exist:%v", c.binder)
 	}
-	b, err = json.Marshal(message.Parse(reply))
-	if err != nil {
-		return err
-	}
-	return c.Write(b)
+	return bind.Marshal(message.Parse(reply))
 }

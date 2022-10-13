@@ -9,29 +9,13 @@ import (
 	"github.com/smallnest/rpcx/share"
 )
 
-const (
-	ContextEncodingTypeName  = "_binding_encoding_type"
-	ContextEncodingTypeValue = binder.EncodingTypeJson
-)
+// Binder 默认编解码方式
+var Binder = binder.New(binder.EncodingTypeJson)
 
 type Context struct {
 	*server.Context
-	body values.Values
-}
-
-func (this *Context) SetBinder(t binder.EncodingType) {
-	this.Context.SetValue(ContextEncodingTypeName, t)
-}
-func (this *Context) GetBinder() (r binder.Interface) {
-	v := this.Context.Get(ContextEncodingTypeName)
-	if v == nil {
-		v = ContextEncodingTypeValue
-	}
-	t, ok := v.(binder.EncodingType)
-	if !ok {
-		return
-	}
-	return binder.Handle(t)
+	body   values.Values
+	binder binder.EncodingType
 }
 
 func (this *Context) Bind(i interface{}) error {
@@ -39,8 +23,8 @@ func (this *Context) Bind(i interface{}) error {
 	if len(data) == 0 {
 		return nil
 	}
-	if binder := this.GetBinder(); binder != nil {
-		return binder.Unmarshal(data, i)
+	if bind := this.GetBinder(); bind != nil {
+		return bind.Unmarshal(data, i)
 	}
 	return nil
 }
@@ -91,6 +75,18 @@ func (this *Context) SetMetadata(key, val string) {
 	}
 	meta[key] = val
 	this.Context.SetValue(share.ResMetaDataKey, meta)
+}
+
+func (this *Context) SetBinder(t binder.EncodingType) {
+	this.binder = t
+}
+
+func (this *Context) GetBinder() (r binder.Interface) {
+	if this.binder != 0 {
+		return binder.Handle(this.binder)
+	} else {
+		return Binder
+	}
 }
 
 func (this *Context) values() values.Values {
