@@ -43,7 +43,7 @@ func (this *XServer) handle(sc *server.Context) error {
 			logger.Info("rpcx server recover error:%v\n%v", r, string(debug.Stack()))
 		}
 	}()
-	urlPath := this.Registry.Clean(sc.ServicePath(), sc.ServiceMethod())
+	urlPath := registry.Join(sc.ServicePath(), sc.ServiceMethod())
 
 	node, ok := this.Match(urlPath)
 	if !ok {
