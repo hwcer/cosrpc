@@ -1,7 +1,6 @@
 package cosrpc
 
 import (
-	"fmt"
 	"github.com/hwcer/cosgo"
 	"github.com/hwcer/cosgo/message"
 	"github.com/hwcer/logger"
@@ -11,9 +10,10 @@ import (
 	"strings"
 )
 
+type HandlerFilter func(node *registry.Node) bool
 type HandlerCaller func(node *registry.Node, c *Context) (interface{}, error)
 type HandlerMetadata func() string
-type HandlerSerialize func(c *Context, reply interface{}) ([]byte, error)
+type HandlerSerialize func(c *Context, reply interface{}) (interface{}, error)
 
 type handleCaller interface {
 	Caller(node *registry.Node, c *Context) interface{}
@@ -21,6 +21,7 @@ type handleCaller interface {
 
 type Handler struct {
 	caller    HandlerCaller
+	filter    HandlerFilter
 	metadata  []HandlerMetadata
 	serialize HandlerSerialize
 }
@@ -28,6 +29,9 @@ type Handler struct {
 func (this *Handler) Use(src interface{}) {
 	if v, ok := src.(HandlerCaller); ok {
 		this.caller = v
+	}
+	if v, ok := src.(HandlerFilter); ok {
+		this.filter = v
 	}
 	if v, ok := src.(HandlerMetadata); ok {
 		this.metadata = append(this.metadata, v)
@@ -38,6 +42,9 @@ func (this *Handler) Use(src interface{}) {
 }
 
 func (this *Handler) Filter(node *registry.Node) bool {
+	if this.filter != nil {
+		return this.filter(node)
+	}
 	if node.IsFunc() {
 		_, ok := node.Method().(func(*Context) interface{})
 		return ok
@@ -90,16 +97,19 @@ func (this *Handler) Metadata() string {
 	return strings.Join(arr, "&")
 }
 
-func (this *Handler) Serialize(c *Context, reply interface{}) ([]byte, error) {
-	if b, ok := reply.([]byte); ok {
-		return b, nil
-	}
+func (this *Handler) Serialize(c *Context, reply interface{}) (err error) {
 	if this.serialize != nil {
-		return this.serialize(c, reply)
+		reply, err = this.serialize(c, reply)
+	} else {
+		reply = message.Parse(reply)
 	}
-	bind := c.GetBinder()
-	if bind == nil {
-		return nil, fmt.Errorf("binder not exist:%v", c.binder)
+	if err != nil {
+		return
 	}
-	return bind.Marshal(message.Parse(reply))
+	var b []byte
+	b, err = c.Binder.Marshal(reply)
+	if err != nil {
+		return
+	}
+	return c.Write(b)
 }

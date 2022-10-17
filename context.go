@@ -9,13 +9,10 @@ import (
 	"github.com/smallnest/rpcx/share"
 )
 
-// Binder 默认编解码方式
-var Binder = binder.New(binder.EncodingTypeJson)
-
 type Context struct {
 	*server.Context
 	body   values.Values
-	binder binder.EncodingType
+	Binder binder.Interface
 }
 
 func (this *Context) Bind(i interface{}) error {
@@ -23,10 +20,7 @@ func (this *Context) Bind(i interface{}) error {
 	if len(data) == 0 {
 		return nil
 	}
-	if bind := this.GetBinder(); bind != nil {
-		return bind.Unmarshal(data, i)
-	}
-	return nil
+	return this.Binder.Unmarshal(data, i)
 }
 
 func (this *Context) Error(err interface{}) *message.Message {
@@ -75,18 +69,6 @@ func (this *Context) SetMetadata(key, val string) {
 	}
 	meta[key] = val
 	this.Context.SetValue(share.ResMetaDataKey, meta)
-}
-
-func (this *Context) SetBinder(t binder.EncodingType) {
-	this.binder = t
-}
-
-func (this *Context) GetBinder() (r binder.Interface) {
-	if this.binder != 0 {
-		return binder.Handle(this.binder)
-	} else {
-		return Binder
-	}
 }
 
 func (this *Context) values() values.Values {

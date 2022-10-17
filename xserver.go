@@ -3,6 +3,7 @@ package cosrpc
 import (
 	"crypto/tls"
 	"errors"
+	"github.com/hwcer/cosgo/binder"
 	"github.com/hwcer/cosgo/utils"
 	"github.com/hwcer/logger"
 	"github.com/hwcer/registry"
@@ -25,6 +26,7 @@ type Register interface {
 
 func NewXServer() *XServer {
 	r := &XServer{}
+	r.Binder = binder.New(binder.MIMEJSON)
 	r.Registry = registry.New(nil)
 	r.rpcServer = server.NewServer()
 	return r
@@ -32,6 +34,7 @@ func NewXServer() *XServer {
 
 type XServer struct {
 	*registry.Registry
+	Binder      binder.Interface
 	rpcServer   *server.Server
 	rpcRegister Register
 }
@@ -54,17 +57,12 @@ func (this *XServer) handle(sc *server.Context) error {
 	if !ok {
 		return errors.New("handler unknown")
 	}
-	c := &Context{Context: sc}
+	c := &Context{Context: sc, Binder: this.Binder}
 	reply, err := handler.Caller(node, c)
 	if err != nil {
 		return err
 	}
-	var b []byte
-	if b, err = handler.Serialize(c, reply); err != nil {
-		return err
-	} else {
-		return c.Write(b)
-	}
+	return handler.Serialize(c, reply)
 }
 
 func (this *XServer) Server() *server.Server {
@@ -74,11 +72,7 @@ func (this *XServer) Server() *server.Server {
 func (this *XServer) Service(name string, handler ...interface{}) *registry.Service {
 	service := this.Registry.Service(name)
 	if service.Handler == nil {
-		h := &Handler{}
-		service.Handler = h
-		service.On(registry.FilterEventTypeFunc, h.Filter)
-		service.On(registry.FilterEventTypeMethod, h.Filter)
-		service.On(registry.FilterEventTypeStruct, h.Filter)
+		service.Handler = &Handler{}
 	}
 	if h, ok := service.Handler.(*Handler); ok {
 		for _, i := range handler {

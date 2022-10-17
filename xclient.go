@@ -2,9 +2,9 @@ package cosrpc
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/hwcer/cosgo/binder"
 	"github.com/hwcer/cosgo/message"
 	"github.com/smallnest/rpcx/client"
 	"github.com/smallnest/rpcx/protocol"
@@ -15,6 +15,7 @@ import (
 func NewXClient(discovery client.ServiceDiscovery) *XClient {
 	return &XClient{
 		clients:   make(map[string]*Client),
+		Binder:    binder.New(binder.MIMEJSON),
 		Discovery: discovery,
 	}
 }
@@ -23,6 +24,7 @@ type XClient struct {
 	sync.Mutex
 	started   bool
 	clients   map[string]*Client
+	Binder    binder.Interface
 	Discovery client.ServiceDiscovery
 }
 
@@ -141,7 +143,7 @@ func (this *XClient) XCall(ctx context.Context, servicePath, serviceMethod strin
 	if v, ok := args.([]byte); ok {
 		data = v
 	} else {
-		data, err = json.Marshal(args)
+		data, err = this.Binder.Marshal(args)
 	}
 	if err != nil {
 		return err
@@ -160,7 +162,7 @@ func (this *XClient) XCall(ctx context.Context, servicePath, serviceMethod strin
 	}
 
 	msg := message.New()
-	err = json.Unmarshal(v, msg)
+	err = this.Binder.Unmarshal(v, msg)
 	if err != nil {
 		return err
 	}
