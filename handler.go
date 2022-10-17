@@ -103,7 +103,7 @@ func (this *Handler) Serialize(c *Context, reply interface{}) (err error) {
 	} else {
 		reply = message.Parse(reply)
 	}
-	if err != nil {
+	if err != nil || reply == nil {
 		return
 	}
 	var b []byte
