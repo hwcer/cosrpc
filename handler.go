@@ -100,11 +100,9 @@ func (this *Handler) Metadata() string {
 func (this *Handler) Serialize(c *Context, reply interface{}) (err error) {
 	if this.serialize != nil {
 		reply, err = this.serialize(c, reply)
-	} else {
-		reply = message.Parse(reply)
 	}
 	if err != nil || reply == nil {
-		return
+		return c.Write(err)
 	}
 	var b []byte
 	b, err = c.Binder.Marshal(reply)
