@@ -20,6 +20,7 @@ func (this *Context) Bind(i interface{}) error {
 	if len(data) == 0 {
 		return nil
 	}
+
 	return this.Binder.Unmarshal(data, i)
 }
 

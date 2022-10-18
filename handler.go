@@ -80,7 +80,7 @@ func (this *Handler) Caller(node *registry.Node, c *Context) (reply interface{},
 	if node.IsFunc() {
 		m := node.Method().(func(*Context) interface{})
 		reply = m(c)
-	} else if s, ok := node.Method().(handleCaller); ok {
+	} else if s, ok := node.Binder().(handleCaller); ok {
 		reply = s.Caller(node, c)
 	} else {
 		r := node.Call(c)
@@ -101,13 +101,15 @@ func (this *Handler) Serialize(c *Context, reply interface{}) (err error) {
 	if this.serialize != nil {
 		reply, err = this.serialize(c, reply)
 	}
-	if err != nil || reply == nil {
-		return c.Write(err)
+	if err != nil {
+		return c.WriteError(err)
+	} else if reply == nil {
+		return c.Write(nil)
 	}
 	var b []byte
 	b, err = c.Binder.Marshal(reply)
 	if err != nil {
-		return
+		return c.WriteError(err)
 	}
 	return c.Write(b)
 }
