@@ -103,13 +103,14 @@ func (this *Handler) Serialize(c *Context, reply interface{}) (err error) {
 	}
 	if err != nil {
 		return c.WriteError(err)
-	} else if reply == nil {
-		return c.Write(nil)
 	}
-	var b []byte
-	b, err = c.Binder.Marshal(reply)
+	if b, ok := reply.([]byte); ok {
+		return c.Write(b)
+	}
+	var data []byte
+	data, err = c.Binder.Marshal(message.Parse(reply))
 	if err != nil {
 		return c.WriteError(err)
 	}
-	return c.Write(b)
+	return c.Write(data)
 }

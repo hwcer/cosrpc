@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/hwcer/cosgo/binder"
+	"github.com/hwcer/cosgo/message"
 	"github.com/smallnest/rpcx/client"
 	"github.com/smallnest/rpcx/protocol"
 	"reflect"
@@ -156,21 +157,24 @@ func (this *XClient) XCall(ctx context.Context, servicePath, serviceMethod strin
 	}
 	v := make([]byte, 0)
 	err = this.Call(ctx, servicePath, serviceMethod, data, &v)
-	if err != nil {
-		return ParseError(err)
+
+	var msg *message.Message
+	var isReplyMsg bool
+
+	if msg, isReplyMsg = reply.(*message.Message); !isReplyMsg {
+		msg = message.New()
 	}
-	err = this.Binder.Unmarshal(v, reply)
+
+	err = this.Binder.Unmarshal(v, msg)
 	if err != nil {
-		return ParseError(err)
+		err = msg.Errorf(0, err)
 	}
-	return nil
-	//msg := message.New()
-	//err = this.Binder.Unmarshal(v, msg)
-	//if err != nil {
-	//	return err
-	//}
-	//if msg.Code != 0 {
-	//	return msg
-	//}
-	//return msg.Unmarshal(reply)
+	if isReplyMsg || err != nil {
+		return err
+	}
+
+	if msg.Code != 0 {
+		return msg
+	}
+	return msg.Unmarshal(reply)
 }
