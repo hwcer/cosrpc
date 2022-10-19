@@ -9,6 +9,8 @@ import (
 	"github.com/smallnest/rpcx/share"
 )
 
+const MetadataContentType = "_Binder_Content_Type_"
+
 type Context struct {
 	*server.Context
 	body   values.Values
@@ -20,8 +22,14 @@ func (this *Context) Bind(i interface{}) error {
 	if len(data) == 0 {
 		return nil
 	}
-
-	return this.Binder.Unmarshal(data, i)
+	var bind binder.Interface
+	if t := this.GetMetadata(MetadataContentType); t != "" {
+		bind = binder.New(t)
+	}
+	if bind == nil {
+		bind = this.Binder
+	}
+	return bind.Unmarshal(data, i)
 }
 
 func (this *Context) Error(err interface{}) *message.Message {
