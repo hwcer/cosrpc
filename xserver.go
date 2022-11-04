@@ -39,26 +39,27 @@ type XServer struct {
 	rpcRegister Register
 }
 
+// closure 闭包绑定 route和Node
+func (h *XServer) closure(node *registry.Node) func(*server.Context) error {
+	return func(sc *server.Context) error {
+		return h.handle(sc, node)
+	}
+}
+
 // handle services入口
-func (this *XServer) handle(sc *server.Context) error {
+func (this *XServer) handle(sc *server.Context, node *registry.Node) error {
 	defer func() {
 		if r := recover(); r != nil {
 			logger.Info("rpcx server recover error:%v\n%v", r, string(debug.Stack()))
 		}
 	}()
-	urlPath := registry.Join(sc.ServicePath(), sc.ServiceMethod())
-
-	node, ok := this.Match(urlPath)
-	if !ok {
-		return errors.New("ServicePath not exist")
-	}
 	service := node.Service()
 	handler, ok := service.Handler.(*Handler)
 	if !ok {
 		return errors.New("handler unknown")
 	}
 	c := &Context{Context: sc, Binder: this.Binder}
-	reply, err := handler.Caller(node, c)
+	reply, err := handler.handle(node, c)
 	if err != nil {
 		return err
 	}
@@ -85,12 +86,10 @@ func (this *XServer) Service(name string, handler ...interface{}) *registry.Serv
 func (this *XServer) Start(network, address string, register Register) (err error) {
 	this.rpcServer.DisableHTTPGateway = true
 	//启动服务
-	for _, service := range this.Registry.Services() {
-		servicePath := service.Name()
-		for _, serviceMethod := range service.Paths() {
-			this.rpcServer.AddHandler(servicePath, serviceMethod, this.handle)
-		}
-	}
+	this.Registry.Range(func(service *registry.Service, node *registry.Node) bool {
+		this.rpcServer.AddHandler(service.Name(), node.Name(), this.closure(node))
+		return true
+	})
 	this.rpcServer.Plugins.Add(register)
 	err = utils.Timeout(time.Second, func() error {
 		return this.rpcServer.Serve(network, address)

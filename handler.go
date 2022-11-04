@@ -63,7 +63,34 @@ func (this *Handler) Filter(node *registry.Node) bool {
 	}
 }
 
-func (this *Handler) Caller(node *registry.Node, c *Context) (reply interface{}, err error) {
+func (this *Handler) Metadata() string {
+	var arr []string
+	for _, f := range this.metadata {
+		arr = append(arr, f())
+	}
+	return strings.Join(arr, "&")
+}
+
+func (this *Handler) Serialize(c *Context, reply interface{}) (err error) {
+	if this.serialize != nil {
+		reply, err = this.serialize(c, reply)
+	}
+	if err != nil {
+		return c.WriteError(err)
+	}
+	var ok bool
+	var data []byte
+	if data, ok = reply.([]byte); !ok {
+		data, err = c.Binder.Marshal(message.Parse(reply))
+	}
+	if err != nil {
+		return c.WriteError(err)
+	} else {
+		return c.Write(data)
+	}
+}
+
+func (this *Handler) handle(node *registry.Node, c *Context) (reply interface{}, err error) {
 	defer func() {
 		if v := recover(); v != nil {
 			if cosgo.Debug() {
@@ -87,30 +114,4 @@ func (this *Handler) Caller(node *registry.Node, c *Context) (reply interface{},
 		reply = r[0].Interface()
 	}
 	return
-}
-
-func (this *Handler) Metadata() string {
-	var arr []string
-	for _, f := range this.metadata {
-		arr = append(arr, f())
-	}
-	return strings.Join(arr, "&")
-}
-
-func (this *Handler) Serialize(c *Context, reply interface{}) (err error) {
-	if this.serialize != nil {
-		reply, err = this.serialize(c, reply)
-	}
-	if err != nil {
-		return c.WriteError(err)
-	}
-	if b, ok := reply.([]byte); ok {
-		return c.Write(b)
-	}
-	var data []byte
-	data, err = c.Binder.Marshal(message.Parse(reply))
-	if err != nil {
-		return c.WriteError(err)
-	}
-	return c.Write(data)
 }
