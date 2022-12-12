@@ -2,8 +2,8 @@ package cosrpc
 
 import (
 	"github.com/hwcer/cosgo/binder"
+	"github.com/hwcer/cosgo/logger"
 	"github.com/hwcer/cosgo/values"
-	"github.com/hwcer/logger"
 	"github.com/smallnest/rpcx/server"
 	"github.com/smallnest/rpcx/share"
 )
