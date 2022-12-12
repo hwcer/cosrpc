@@ -1,12 +1,10 @@
 package cosrpc
 
 import (
-	"github.com/hwcer/cosgo"
-	"github.com/hwcer/cosgo/message"
+	"github.com/hwcer/cosgo/values"
 	"github.com/hwcer/logger"
 	"github.com/hwcer/registry"
 	"reflect"
-	"runtime/debug"
 	"strings"
 )
 
@@ -81,7 +79,7 @@ func (this *Handler) Serialize(c *Context, reply interface{}) (err error) {
 	var ok bool
 	var data []byte
 	if data, ok = reply.([]byte); !ok {
-		data, err = c.Binder.Marshal(message.Parse(reply))
+		data, err = c.Binder.Marshal(values.NewMessage(reply))
 	}
 	if err != nil {
 		return c.WriteError(err)
@@ -92,13 +90,9 @@ func (this *Handler) Serialize(c *Context, reply interface{}) (err error) {
 
 func (this *Handler) handle(node *registry.Node, c *Context) (reply interface{}, err error) {
 	defer func() {
-		if v := recover(); v != nil {
-			if cosgo.Debug() {
-				reply = message.Errorf(500, v)
-			} else {
-				reply = message.Errorf(500, "server recover error")
-			}
-			logger.Info("rpc server recover error:%v\n%v", v, string(debug.Stack()))
+		if e := recover(); e != nil {
+			reply = values.NewError(500, "server recover error")
+			logger.Error(e)
 		}
 	}()
 	if this.caller != nil {

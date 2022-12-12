@@ -2,7 +2,6 @@ package cosrpc
 
 import (
 	"github.com/hwcer/cosgo/binder"
-	"github.com/hwcer/cosgo/message"
 	"github.com/hwcer/cosgo/values"
 	"github.com/hwcer/logger"
 	"github.com/smallnest/rpcx/server"
@@ -32,12 +31,12 @@ func (this *Context) Bind(i interface{}) error {
 	return bind.Unmarshal(data, i)
 }
 
-func (this *Context) Error(err interface{}) *message.Message {
-	return message.Error(err)
+func (this *Context) Error(err interface{}) *values.Message {
+	return values.NewError(0, err)
 }
 
-func (this *Context) Errorf(code int, format string, args ...interface{}) *message.Message {
-	return message.Errorf(code, format, args...)
+func (this *Context) Errorf(code int, format string, args ...interface{}) *values.Message {
+	return values.NewError(code, format, args...)
 }
 
 func (this *Context) Get(key string) interface{} {
