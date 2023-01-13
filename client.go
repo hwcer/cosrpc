@@ -28,7 +28,7 @@ func (this *Client) Start(discovery client.ServiceDiscovery) (err error) {
 	case client.SelectMode:
 		err = this.Registry(v, nil)
 	default:
-		err = fmt.Errorf("XClient AddServicePath arg(Selector) type error:%v", this.Selector)
+		err = fmt.Errorf("XClient AddServicePath arg(selector) type error:%v", this.Selector)
 	}
 	return
 }
