@@ -6,29 +6,30 @@ import (
 )
 
 type Client struct {
-	client      client.XClient
-	Option      client.Option
-	FailMode    client.FailMode
-	Selector    interface{} //client.Selector OR client.SelectMode OR address(Peer2Peer MultipleServers)
-	Discovery   client.ServiceDiscovery
+	client   client.XClient
+	Option   client.Option
+	FailMode client.FailMode
+	Selector interface{} //client.Selector OR client.SelectMode OR address(Peer2Peer MultipleServers)
+	//Discovery   client.ServiceDiscovery
 	ServicePath string
 }
 
 func (this *Client) Start(discovery client.ServiceDiscovery) (err error) {
-	if this.Discovery == nil {
-		this.Discovery = discovery
-	}
+	exist := this.client
 	switch v := this.Selector.(type) {
 	case string:
 		err = this.Peer2Peer(v)
 	case []string:
 		err = this.Multiple(v)
 	case client.Selector:
-		err = this.Registry(client.SelectByUser, v)
+		err = this.Registry(client.SelectByUser, v, discovery)
 	case client.SelectMode:
-		err = this.Registry(v, nil)
+		err = this.Registry(v, nil, discovery)
 	default:
 		err = fmt.Errorf("XClient AddServicePath arg(selector) type error:%v", this.Selector)
+	}
+	if err == nil && exist != nil {
+		_ = exist.Close()
 	}
 	return
 }
@@ -58,8 +59,8 @@ func (this *Client) Multiple(address []string) error {
 }
 
 // Registry 使用注册中心
-func (this *Client) Registry(selectMod client.SelectMode, selector client.Selector) error {
-	this.client = client.NewXClient(this.ServicePath, this.FailMode, selectMod, this.Discovery, this.Option)
+func (this *Client) Registry(selectMod client.SelectMode, selector client.Selector, discovery client.ServiceDiscovery) error {
+	this.client = client.NewXClient(this.ServicePath, this.FailMode, selectMod, discovery, this.Option)
 	if selectMod == client.SelectByUser && selector != nil {
 		this.client.SetSelector(selector)
 	}

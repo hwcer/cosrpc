@@ -21,7 +21,7 @@ func NewXClient(discovery client.ServiceDiscovery) *XClient {
 }
 
 type XClient struct {
-	sync.Mutex
+	mutex     sync.Mutex
 	started   bool
 	clients   map[string]*Client
 	Binder    binder.Interface
@@ -30,39 +30,42 @@ type XClient struct {
 
 // AddServicePath 观察服务器信息
 func (this *XClient) AddServicePath(servicePath string, selector interface{}) (c *Client, err error) {
+	this.mutex.Lock()
+	defer this.mutex.Unlock()
+	if this.started {
+		return nil, fmt.Errorf("server started")
+	}
+	if c = this.clients[servicePath]; c != nil {
+		return
+	}
 	c = &Client{}
 	c.Option = client.DefaultOption
 	c.FailMode = client.Failtry
 	c.Selector = selector
 	c.ServicePath = servicePath
 	c.Option.SerializeType = protocol.SerializeNone
-	this.Mutex.Lock()
-	defer this.Mutex.Unlock()
-	if !this.started {
-		this.clients[servicePath] = c
-		return
-	}
-	if err = c.Start(this.Discovery); err != nil {
-		return
-	}
-	exist := this.clients[servicePath]
-	clients := make(map[string]*Client)
-	for k, v := range this.clients {
-		clients[k] = v
-	}
-	clients[servicePath] = c
-	this.clients = clients
-
-	if exist != nil {
-		_ = exist.client.Close()
-	}
-
+	this.clients[servicePath] = c
 	return
 }
 
+// SetSelector 设置selector,必须在AddServicePath中已经添加
+func (this *XClient) SetSelector(servicePath string, selector interface{}) bool {
+	this.mutex.Lock()
+	defer this.mutex.Unlock()
+	c, ok := this.clients[servicePath]
+	if !ok {
+		return false
+	}
+	c.Selector = selector
+	if this.started {
+		_ = c.Start(this.Discovery)
+	}
+	return true
+}
+
 func (this *XClient) Start() (err error) {
-	this.Mutex.Lock()
-	defer this.Mutex.Unlock()
+	this.mutex.Lock()
+	defer this.mutex.Unlock()
 	if this.started {
 		return nil
 	}
@@ -75,20 +78,16 @@ func (this *XClient) Start() (err error) {
 	return nil
 }
 
-func (this *XClient) Close() (errs []error) {
-	var err error
+func (this *XClient) Close() (err error) {
 	for _, c := range this.clients {
 		if err = c.client.Close(); err != nil {
-			errs = append(errs, err)
-			if c.Discovery != nil {
-				c.Discovery.Close()
-			}
+			return
 		}
 	}
 	if this.Discovery != nil {
 		this.Discovery.Close()
 	}
-	return nil
+	return
 }
 
 func (this *XClient) Has(servicePath string) bool {
