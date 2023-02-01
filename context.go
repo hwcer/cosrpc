@@ -31,12 +31,12 @@ func (this *Context) Bind(i interface{}) error {
 	return bind.Unmarshal(data, i)
 }
 
-func (this *Context) Error(err interface{}) *values.Message {
-	return values.NewError(0, err)
+func (this *Context) Error(err any) *values.Message {
+	return values.Errorf(0, err)
 }
 
-func (this *Context) Errorf(code int, format string, args ...interface{}) *values.Message {
-	return values.NewError(code, format, args...)
+func (this *Context) Errorf(code int, format any, args ...interface{}) *values.Message {
+	return values.Errorf(code, format, args...)
 }
 
 func (this *Context) Get(key string) interface{} {
