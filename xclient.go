@@ -180,3 +180,22 @@ func (this *XClient) XCall(ctx context.Context, servicePath, serviceMethod strin
 		return nil
 	}
 }
+
+// Async 异步
+func (this *XClient) Async(ctx context.Context, servicePath, serviceMethod string, args interface{}) (err error) {
+	var data []byte
+	if v, ok := args.([]byte); ok {
+		data = v
+	} else {
+		data, err = this.Binder.Marshal(args)
+	}
+	if err != nil {
+		return err
+	}
+	if c := this.Client(servicePath); c != nil {
+		_, err = c.Go(ctx, serviceMethod, data, nil, nil)
+	} else {
+		err = client.ErrXClientNoServer
+	}
+	return err
+}
