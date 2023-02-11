@@ -40,7 +40,7 @@ func (this *XClient) AddServicePath(servicePath string, selector interface{}) (c
 	}
 	c = &Client{}
 	c.Option = client.DefaultOption
-	c.FailMode = client.Failtry
+	c.FailMode = client.Failover
 	c.Selector = selector
 	c.ServicePath = servicePath
 	c.Option.SerializeType = protocol.SerializeNone
