@@ -1,19 +1,24 @@
 package cosrpc
 
 import (
+	"bytes"
 	"github.com/hwcer/cosgo/binder"
 	"github.com/hwcer/cosgo/logger"
 	"github.com/hwcer/cosgo/values"
 	"github.com/smallnest/rpcx/server"
 	"github.com/smallnest/rpcx/share"
+	"io"
 )
-
-const MetadataContentType = "_Binder_Content_Type_"
 
 type Context struct {
 	*server.Context
 	body   values.Values
 	Binder binder.Interface
+}
+
+// Reader 返回一个io.Reader来读取包体
+func (this *Context) Reader() io.Reader {
+	return bytes.NewReader(this.Context.Payload())
 }
 
 func (this *Context) Bind(i interface{}) error {
@@ -22,7 +27,7 @@ func (this *Context) Bind(i interface{}) error {
 		return nil
 	}
 	var bind binder.Interface
-	if t := this.GetMetadata(MetadataContentType); t != "" {
+	if t := this.GetMetadata(binder.ContentType); t != "" {
 		bind = binder.New(t)
 	}
 	if bind == nil {
