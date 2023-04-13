@@ -16,13 +16,6 @@ type Caller interface {
 	Caller(c *server.Context, node *registry.Node) interface{}
 }
 
-// Register 通过registry集中注册对象
-//type Register interface {
-//	server.RegisterPlugin
-//	Stop() error
-//	Start() error
-//}
-
 func NewXServer() *XServer {
 	r := &XServer{}
 	r.Server = server.NewServer()
