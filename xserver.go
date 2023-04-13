@@ -3,9 +3,9 @@ package cosrpc
 import (
 	"errors"
 	"github.com/hwcer/cosgo/binder"
-	"github.com/hwcer/cosgo/logger"
 	"github.com/hwcer/cosgo/registry"
-	"github.com/hwcer/cosgo/utils"
+	"github.com/hwcer/cosgo/scc"
+	"github.com/hwcer/logger"
 	"github.com/smallnest/rpcx/server"
 	"runtime/debug"
 	"time"
@@ -55,7 +55,7 @@ func (h *XServer) rpcxHandle(node *registry.Node) func(*server.Context) error {
 func (this *XServer) handle(sc *server.Context, node *registry.Node) error {
 	defer func() {
 		if r := recover(); r != nil {
-			logger.Info("rpcx server recover error:%v\n%v", r, string(debug.Stack()))
+			logger.Alert("rpcx server recover error:%v\n%v", r, string(debug.Stack()))
 		}
 	}()
 	handler, ok := node.Service.Handler.(*Handler)
@@ -101,10 +101,10 @@ func (this *XServer) Start(network, address string) (err error) {
 		return
 	}
 	//this.Server.Plugins.Add(register)
-	err = utils.Timeout(time.Second, func() error {
+	err = scc.Timeout(time.Second, func() error {
 		return this.Server.Serve(network, address)
 	})
-	if err == utils.ErrorTimeout {
+	if err == scc.ErrorTimeout {
 		err = nil
 	}
 	if err != nil {

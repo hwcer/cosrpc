@@ -2,7 +2,7 @@ package cosrpc
 
 import (
 	"fmt"
-	"github.com/hwcer/cosgo/logger"
+	"github.com/hwcer/logger"
 	"github.com/smallnest/rpcx/log"
 )
 
@@ -23,27 +23,27 @@ func (l *dummyLogger) Debugf(format string, v ...interface{}) {
 }
 
 func (l *dummyLogger) Info(v ...interface{}) {
-	logger.Info(fmt.Sprint(v))
+	logger.Trace(fmt.Sprint(v))
 }
 
 func (l *dummyLogger) Infof(format string, v ...interface{}) {
-	logger.Info(format, v...)
+	logger.Trace(format, v...)
 }
 
 func (l *dummyLogger) Warn(v ...interface{}) {
-	logger.Warn(fmt.Sprint(v))
+	logger.Alert(fmt.Sprint(v))
 }
 
 func (l *dummyLogger) Warnf(format string, v ...interface{}) {
-	logger.Warn(format, v...)
+	logger.Alert(format, v...)
 }
 
 func (l *dummyLogger) Error(v ...interface{}) {
-	logger.Warn(fmt.Sprint(v))
+	logger.Alert(fmt.Sprint(v))
 }
 
 func (l *dummyLogger) Errorf(format string, v ...interface{}) {
-	logger.Warn(format, v...)
+	logger.Alert(format, v...)
 }
 
 func (l *dummyLogger) Fatal(v ...interface{}) {
