@@ -6,19 +6,18 @@ import (
 )
 
 type Client struct {
-	client   client.XClient
-	Option   client.Option
-	FailMode client.FailMode
-	Selector interface{} //client.Selector OR client.SelectMode OR address(Peer2Peer MultipleServers)
-	//Discovery   client.ServiceDiscovery
+	client      client.XClient
+	Option      client.Option
+	FailMode    client.FailMode
+	Selector    interface{} //client.Selector OR client.SelectMode OR address(Peer2Peer MultipleServers)
+	Discovery   client.ServiceDiscovery
 	ServicePath string
 }
 
-func (this *Client) Start(discovery client.ServiceDiscovery) (err error) {
-	exist := this.client
+func (this *Client) Start(discovery RegistryDiscovery) (err error) {
 	switch v := this.Selector.(type) {
 	case string:
-		err = this.Peer2Peer(v)
+		err = this.Multiple([]string{v})
 	case []string:
 		err = this.Multiple(v)
 	case client.Selector:
@@ -28,41 +27,55 @@ func (this *Client) Start(discovery client.ServiceDiscovery) (err error) {
 	default:
 		err = fmt.Errorf("XClient AddServicePath arg(selector) type error:%v", this.Selector)
 	}
-	if err == nil && exist != nil {
-		_ = exist.Close()
-	}
 	return
 }
 
 // Peer2Peer 点对点
-func (this *Client) Peer2Peer(address string) error {
-	discovery, err := client.NewPeer2PeerDiscovery("tcp@"+address, "")
-	if err != nil {
-		return err
-	}
-	this.client = client.NewXClient(this.ServicePath, this.FailMode, client.RandomSelect, discovery, this.Option)
-	return nil
-}
+//func (this *Client) Peer2Peer(address string) error {
+//	discovery, err := client.NewPeer2PeerDiscovery("tcp@"+address, "")
+//	if err != nil {
+//		return err
+//	}
+//	this.client = client.NewXClient(this.ServicePath, this.FailMode, client.RandomSelect, discovery, this.Option)
+//	return nil
+//}
 
 // Multiple 点对多
-func (this *Client) Multiple(address []string) error {
-	var arr []*client.KVPair
+func (this *Client) Multiple(address []string) (err error) {
+	var pairs []*client.KVPair
 	for _, addr := range address {
-		arr = append(arr, &client.KVPair{Key: fmt.Sprintf("tcp@%v", addr)})
+		pairs = append(pairs, &client.KVPair{Key: fmt.Sprintf("tcp@%v", addr)})
 	}
-	discovery, err := client.NewMultipleServersDiscovery(arr)
-	if err != nil {
-		return err
+	if c := this.client; c != nil {
+		if discovery, ok := this.Discovery.(*client.MultipleServersDiscovery); ok {
+			discovery.Update(pairs)
+			return nil
+		} else {
+			defer func() {
+				_ = c.Close()
+			}()
+		}
 	}
-	this.client = client.NewXClient(this.ServicePath, this.FailMode, client.RandomSelect, discovery, this.Option)
-	return nil
+	if this.Discovery, err = client.NewMultipleServersDiscovery(pairs); err != nil {
+		return
+	}
+	this.client = client.NewXClient(this.ServicePath, this.FailMode, client.RandomSelect, this.Discovery, this.Option)
+	return
 }
 
 // Registry 使用注册中心
-func (this *Client) Registry(selectMod client.SelectMode, selector client.Selector, discovery client.ServiceDiscovery) error {
-	this.client = client.NewXClient(this.ServicePath, this.FailMode, selectMod, discovery, this.Option)
+func (this *Client) Registry(selectMod client.SelectMode, selector client.Selector, registry RegistryDiscovery) (err error) {
+	if c := this.client; c != nil {
+		defer func() {
+			_ = c.Close()
+		}()
+	}
+	if this.Discovery, err = registry(); err != nil {
+		return
+	}
+	this.client = client.NewXClient(this.ServicePath, this.FailMode, selectMod, this.Discovery, this.Option)
 	if selectMod == client.SelectByUser && selector != nil {
 		this.client.SetSelector(selector)
 	}
-	return nil
+	return
 }

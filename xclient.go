@@ -12,11 +12,13 @@ import (
 	"sync"
 )
 
-func NewXClient(discovery client.ServiceDiscovery) *XClient {
+// 注册中心服务发现,点对点或者点对多时无需设置
+type RegistryDiscovery func() (client.ServiceDiscovery, error)
+
+func NewXClient() *XClient {
 	return &XClient{
-		clients:   make(map[string]*Client),
-		Binder:    binder.New(binder.MIMEJSON),
-		Discovery: discovery,
+		clients: make(map[string]*Client),
+		Binder:  binder.New(binder.MIMEJSON),
 	}
 }
 
@@ -25,7 +27,7 @@ type XClient struct {
 	started   bool
 	clients   map[string]*Client
 	Binder    binder.Interface
-	Discovery client.ServiceDiscovery
+	Discovery RegistryDiscovery
 }
 
 // AddServicePath 观察服务器信息
@@ -84,9 +86,6 @@ func (this *XClient) Close() (err error) {
 			return
 		}
 	}
-	if this.Discovery != nil {
-		this.Discovery.Close()
-	}
 	return
 }
 
@@ -117,7 +116,7 @@ func (this *XClient) Call(ctx context.Context, servicePath, serviceMethod string
 	if c := this.Client(servicePath); c != nil {
 		return c.Call(ctx, serviceMethod, args, reply)
 	} else {
-		return client.ErrXClientNoServer
+		return fmt.Errorf("can not found any server:%v", servicePath)
 	}
 }
 
