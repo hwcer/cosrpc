@@ -39,11 +39,11 @@ func (l *dummyLogger) Warnf(format string, v ...interface{}) {
 }
 
 func (l *dummyLogger) Error(v ...interface{}) {
-	logger.Alert(fmt.Sprint(v))
+	logger.Error(fmt.Sprint(v))
 }
 
 func (l *dummyLogger) Errorf(format string, v ...interface{}) {
-	logger.Alert(format, v...)
+	logger.Error(format, v...)
 }
 
 func (l *dummyLogger) Fatal(v ...interface{}) {
@@ -55,9 +55,9 @@ func (l *dummyLogger) Fatalf(format string, v ...interface{}) {
 }
 
 func (l *dummyLogger) Panic(v ...interface{}) {
-	logger.Fatal(fmt.Sprint(v))
+	logger.Panic(fmt.Sprint(v))
 }
 
 func (l *dummyLogger) Panicf(format string, v ...interface{}) {
-	logger.Fatal(format, v...)
+	logger.Panic(format, v...)
 }
