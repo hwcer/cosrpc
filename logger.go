@@ -47,17 +47,17 @@ func (l *dummyLogger) Errorf(format string, v ...interface{}) {
 }
 
 func (l *dummyLogger) Fatal(v ...interface{}) {
-	logger.Fatal(fmt.Sprint(v))
+	logger.Error(fmt.Sprint(v))
 }
 
 func (l *dummyLogger) Fatalf(format string, v ...interface{}) {
-	logger.Fatal(format, v...)
+	logger.Error(format, v...)
 }
 
 func (l *dummyLogger) Panic(v ...interface{}) {
-	logger.Panic(fmt.Sprint(v))
+	logger.Error(fmt.Sprint(v))
 }
 
 func (l *dummyLogger) Panicf(format string, v ...interface{}) {
-	logger.Panic(format, v...)
+	logger.Error(format, v...)
 }
