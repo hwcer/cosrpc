@@ -10,6 +10,7 @@ import (
 	"github.com/smallnest/rpcx/protocol"
 	"reflect"
 	"sync"
+	"time"
 )
 
 // 注册中心服务发现,点对点或者点对多时无需设置
@@ -31,13 +32,12 @@ type XClient struct {
 }
 
 // AddServicePath 观察服务器信息
-func (this *XClient) AddServicePath(servicePath string, selector interface{}) (c *Client, err error) {
+func (this *XClient) AddServicePath(servicePath string, selector any) (c *Client, err error) {
 	this.mutex.Lock()
 	defer this.mutex.Unlock()
-	if this.started {
-		return nil, fmt.Errorf("server started")
-	}
-	if c = this.clients[servicePath]; c != nil {
+	exist := this.clients[servicePath]
+	if exist != nil && Equal(exist.Selector, selector) {
+		c = exist
 		return
 	}
 	c = &Client{}
@@ -46,30 +46,32 @@ func (this *XClient) AddServicePath(servicePath string, selector interface{}) (c
 	c.Selector = selector
 	c.ServicePath = servicePath
 	c.Option.SerializeType = protocol.SerializeNone
-	this.clients[servicePath] = c
-	return
-}
-
-// SetSelector 设置selector,必须在AddServicePath中已经添加
-func (this *XClient) SetSelector(servicePath string, selector interface{}) bool {
-	this.mutex.Lock()
-	defer this.mutex.Unlock()
-	c, ok := this.clients[servicePath]
-	if !ok {
-		return false
-	}
-	c.Selector = selector
 	if this.started {
-		_ = c.Start(this.Discovery)
+		if err = c.Start(this.Discovery); err != nil {
+			return
+		}
 	}
-	return true
+	clients := map[string]*Client{}
+	for k, v := range this.clients {
+		clients[k] = v
+	}
+	clients[servicePath] = c
+	this.clients = clients
+
+	if exist != nil {
+		//服务重定向，关闭旧的client
+		time.AfterFunc(5*time.Second, func() {
+			_ = exist.client.Close()
+		})
+	}
+	return
 }
 
 func (this *XClient) Start() (err error) {
 	this.mutex.Lock()
 	defer this.mutex.Unlock()
 	if this.started {
-		return nil
+		return
 	}
 	this.started = true
 	for _, c := range this.clients {
@@ -77,7 +79,7 @@ func (this *XClient) Start() (err error) {
 			return
 		}
 	}
-	return nil
+	return
 }
 
 func (this *XClient) Close() (err error) {

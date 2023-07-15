@@ -21,6 +21,7 @@ func NewXServer() *XServer {
 	r.Server = server.NewServer()
 	r.Binder = binder.New(binder.MIMEJSON)
 	r.Registry = registry.New(nil)
+	r.Server.DisableHTTPGateway = true
 	return r
 }
 
@@ -81,7 +82,6 @@ func (this *XServer) Service(name string, handler ...interface{}) *registry.Serv
 }
 
 func (this *XServer) Start(network, address string) (err error) {
-	this.Server.DisableHTTPGateway = true
 	//启动服务
 	this.Registry.Nodes(func(node *registry.Node) (r bool) {
 		//if err = this.Server.RegisterFunctionName(node.Service.Name(), node.Name(), this.closure(node), ""); err != nil {

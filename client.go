@@ -17,7 +17,7 @@ type Client struct {
 func (this *Client) Start(discovery RegistryDiscovery) (err error) {
 	switch v := this.Selector.(type) {
 	case string:
-		err = this.Multiple([]string{v})
+		err = this.Peer2Peer(v)
 	case []string:
 		err = this.Multiple(v)
 	case client.Selector:
@@ -31,14 +31,14 @@ func (this *Client) Start(discovery RegistryDiscovery) (err error) {
 }
 
 // Peer2Peer 点对点
-//func (this *Client) Peer2Peer(address string) error {
-//	discovery, err := client.NewPeer2PeerDiscovery("tcp@"+address, "")
-//	if err != nil {
-//		return err
-//	}
-//	this.client = client.NewXClient(this.ServicePath, this.FailMode, client.RandomSelect, discovery, this.Option)
-//	return nil
-//}
+func (this *Client) Peer2Peer(address string) error {
+	discovery, err := client.NewPeer2PeerDiscovery("tcp@"+address, "")
+	if err != nil {
+		return err
+	}
+	this.client = client.NewXClient(this.ServicePath, this.FailMode, client.RandomSelect, discovery, this.Option)
+	return nil
+}
 
 // Multiple 点对多
 func (this *Client) Multiple(address []string) (err error) {
