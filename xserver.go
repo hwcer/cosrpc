@@ -5,6 +5,7 @@ import (
 	"github.com/hwcer/cosgo/binder"
 	"github.com/hwcer/cosgo/registry"
 	"github.com/hwcer/cosgo/scc"
+	"github.com/hwcer/cosrpc/jsonrpc"
 	"github.com/hwcer/logger"
 	"github.com/smallnest/rpcx/server"
 	"runtime/debug"
@@ -27,26 +28,70 @@ func NewXServer() *XServer {
 
 type XServer struct {
 	*server.Server
+	jsonrpc  jsonrpcHandle
 	Binder   binder.Interface
 	Registry *registry.Registry
 }
 
+func (xs *XServer) Jsonrpc(servicePath, serviceMethod string, handle jsonrpcHandle) {
+	xs.jsonrpc = handle
+	xs.Server.AddHandler(servicePath, serviceMethod, xs.jsonHandle)
+}
+
 // rpcxHandle 闭包绑定 route和Node
-func (h *XServer) rpcxHandle(node *registry.Node) func(*server.Context) error {
+func (xs *XServer) rpcxHandle(node *registry.Node) func(*server.Context) error {
 	return func(sc *server.Context) error {
-		return h.handle(sc, node)
+		return xs.handle(sc, node)
 	}
 }
 
-// httpHandle 闭包绑定 route和Node
-//func (h *XServer) httpHandle(node *registry.Node) func(ctx context.Context, args []byte, reply []byte) error {
-//	return func(ctx context.Context, args []byte, reply []byte) error {
-//		return h.handle(sc, node)
-//	}
-//}
+// jsonHandle jsonrpc handle
+func (xs *XServer) jsonHandle(sc *server.Context) error {
+	defer func() {
+		if r := recover(); r != nil {
+			logger.Alert("rpcx server recover error:%v\n%v", r, string(debug.Stack()))
+		}
+	}()
+	c := NewContext(sc, xs.Binder)
+	b := c.Bytes()
+	var err error
+	var reply []*jsonrpc.Reply
+	if string(b[0:1]) == "[" {
+		var args []*jsonrpc.Args
+		if err = xs.Binder.Unmarshal(b, &args); err != nil {
+			return c.ctx.Write(jsonrpc.NewError(-32700, err).Bytes(xs.Binder))
+		} else if len(args) == 0 {
+			return c.ctx.Write(jsonrpc.NewError(-32600, "Invalid Request").Bytes(xs.Binder))
+		} else if reply, err = xs.jsonrpc(c, args); err != nil {
+			return c.ctx.Write(jsonrpc.NewError(-32603, err).Bytes(xs.Binder))
+		} else if len(reply) != len(args) {
+			return c.ctx.Write(jsonrpc.NewError(-32603, "handle reply error").Bytes(xs.Binder))
+		} else {
+			var data []byte
+			if data, err = xs.Binder.Marshal(reply); err != nil {
+				return c.ctx.Write(jsonrpc.NewError(-32603, "marshal reply error").Bytes(xs.Binder))
+			} else {
+				return c.ctx.Write(data)
+			}
+		}
+	} else if string(b[0:1]) == "{" {
+		args := &jsonrpc.Args{}
+		if err = xs.Binder.Unmarshal(b, args); err != nil {
+			return c.ctx.Write(jsonrpc.NewError(-32700, err).Bytes(xs.Binder))
+		} else if reply, err = xs.jsonrpc(c, []*jsonrpc.Args{args}); err != nil {
+			return c.ctx.Write(args.Errorf(0, err).Bytes(xs.Binder))
+		} else if len(reply) != 1 {
+			return c.ctx.Write(args.Errorf(-32603, "handle reply error").Bytes(xs.Binder))
+		} else {
+			return c.ctx.Write(reply[0].Bytes(xs.Binder))
+		}
+	} else {
+		return c.ctx.Write(jsonrpc.NewError(-32600, "args error"))
+	}
+}
 
 // handle services入口
-func (this *XServer) handle(sc *server.Context, node *registry.Node) error {
+func (xs *XServer) handle(sc *server.Context, node *registry.Node) error {
 	defer func() {
 		if r := recover(); r != nil {
 			logger.Alert("rpcx server recover error:%v\n%v", r, string(debug.Stack()))
@@ -56,7 +101,7 @@ func (this *XServer) handle(sc *server.Context, node *registry.Node) error {
 	if !ok {
 		return errors.New("handler unknown")
 	}
-	c := &Context{Context: sc, Binder: this.Binder}
+	c := NewContext(sc, xs.Binder)
 	reply, err := handler.handle(node, c)
 	if err != nil {
 		return err
@@ -68,8 +113,8 @@ func (this *XServer) handle(sc *server.Context, node *registry.Node) error {
 //	return this.rpcServer
 //}
 
-func (this *XServer) Service(name string, handler ...interface{}) *registry.Service {
-	service := this.Registry.Service(name)
+func (xs *XServer) Service(name string, handler ...interface{}) *registry.Service {
+	service := xs.Registry.Service(name)
 	if service.Handler == nil {
 		service.Handler = &Handler{}
 	}
@@ -81,51 +126,24 @@ func (this *XServer) Service(name string, handler ...interface{}) *registry.Serv
 	return service
 }
 
-func (this *XServer) Start(network, address string) (err error) {
+func (xs *XServer) Start(network, address string) (err error) {
 	//启动服务
-	this.Registry.Nodes(func(node *registry.Node) (r bool) {
-		//if err = this.Server.RegisterFunctionName(node.Service.Name(), node.Name(), this.closure(node), ""); err != nil {
-		//	return false
-		//}
-		this.Server.AddHandler(node.Service.Name(), node.Name(), this.rpcxHandle(node))
+	xs.Registry.Nodes(func(node *registry.Node) (r bool) {
+		xs.Server.AddHandler(node.Service.Name(), node.Name(), xs.rpcxHandle(node))
 		return true
 	})
-	if err != nil {
-		return
-	}
+
 	//this.Server.Plugins.Add(register)
 	err = scc.Timeout(time.Second, func() error {
-		return this.Server.Serve(network, address)
+		return xs.Server.Serve(network, address)
 	})
-	if err == scc.ErrorTimeout {
+	if errors.Is(scc.ErrorTimeout, err) {
 		err = nil
 	}
-	if err != nil {
-		return
-	}
-	//注册服务
-	//this.Registry.Range(func(service *registry.Service) bool {
-	//	servicePath := service.Name()
-	//	var metadata string
-	//	if handle, ok := service.Handler.(*Handler); ok {
-	//		metadata = handle.Metadata()
-	//	}
-	//	if err = register.Register(servicePath, nil, metadata); err != nil {
-	//		return false
-	//	}
-	//	return true
-	//})
-	//if err != nil {
-	//	return
-	//}
-	//if err = register.Start(); err != nil {
-	//	return err
-	//}
-	//this.Register = register
 	return
 }
 
-func (this *XServer) Close() error {
-	_ = this.Server.Shutdown(nil)
+func (xs *XServer) Close() error {
+	_ = xs.Server.Shutdown(nil)
 	return nil
 }

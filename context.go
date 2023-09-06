@@ -4,25 +4,48 @@ import (
 	"bytes"
 	"github.com/hwcer/cosgo/binder"
 	"github.com/hwcer/cosgo/values"
+	"github.com/hwcer/cosrpc/jsonrpc"
 	"github.com/hwcer/logger"
-	"github.com/smallnest/rpcx/server"
 	"github.com/smallnest/rpcx/share"
 	"io"
 )
 
+type ctx interface {
+	Get(key any) any
+	SetValue(key, val any)
+	Payload() []byte
+	Metadata() map[string]string
+	ServicePath() string
+	ServiceMethod() string
+	Write(reply any) error
+}
+
+func NewContext(ctx ctx, b binder.Interface) *Context {
+	return &Context{ctx: ctx, Binder: b}
+}
+
 type Context struct {
-	*server.Context
+	ctx    ctx
 	body   values.Values
 	Binder binder.Interface
 }
 
+func (this *Context) Jsonrpc(args *jsonrpc.Args) *Context {
+	c := jsonrpc.New(this.ctx, args)
+	return NewContext(c, this.Binder)
+}
+
 // Reader 返回一个io.Reader来读取包体
 func (this *Context) Reader() io.Reader {
-	return bytes.NewReader(this.Context.Payload())
+	return bytes.NewReader(this.ctx.Payload())
+}
+
+func (this *Context) Bytes() []byte {
+	return this.ctx.Payload()
 }
 
 func (this *Context) Bind(i interface{}) error {
-	data := this.Context.Payload()
+	data := this.ctx.Payload()
 	if len(data) == 0 {
 		return nil
 	}
@@ -67,21 +90,31 @@ func (this *Context) GetString(key string) (val string) {
 	v := this.values()
 	return v.GetString(key)
 }
+func (this *Context) Metadata() map[string]string {
+	return this.ctx.Metadata()
+}
 
 // GetMetadata GET REQ Metadata
 func (this *Context) GetMetadata(key string) (val string) {
-	return this.Context.Metadata()[key]
+	return this.ctx.Metadata()[key]
 }
 
 // SetMetadata SET RES Metadata
 func (this *Context) SetMetadata(key, val string) {
-	i := this.Context.Get(share.ResMetaDataKey)
+	i := this.ctx.Get(share.ResMetaDataKey)
 	meta, _ := i.(map[string]string)
 	if meta == nil {
 		meta = make(map[string]string)
 	}
 	meta[key] = val
-	this.Context.SetValue(share.ResMetaDataKey, meta)
+	this.ctx.SetValue(share.ResMetaDataKey, meta)
+}
+
+func (this *Context) ServicePath() string {
+	return this.ctx.ServicePath()
+}
+func (this *Context) ServiceMethod() string {
+	return this.ctx.ServiceMethod()
 }
 
 func (this *Context) values() values.Values {

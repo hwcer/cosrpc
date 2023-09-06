@@ -150,7 +150,8 @@ func (this *XClient) XCall(ctx context.Context, servicePath, serviceMethod strin
 	}
 	if _, ok := reply.(*[]byte); ok {
 		if err = this.Call(ctx, servicePath, serviceMethod, data, reply); err != nil {
-			return ParseError(err)
+			//return ParseError(err)
+			return err
 		} else {
 			return nil
 		}
@@ -169,12 +170,12 @@ func (this *XClient) XCall(ctx context.Context, servicePath, serviceMethod strin
 		err = this.Binder.Unmarshal(v, msg)
 	}
 	if err != nil {
-		msg.Errorf(0, err)
+		msg.Format(0, err)
 	}
 	if isReplyMsg {
 		return nil
 	} else if msg.Code != 0 {
-		return msg
+		return errors.New(msg.String())
 	} else if reply != nil {
 		return msg.Unmarshal(reply)
 	} else {

@@ -1,6 +1,7 @@
 package cosrpc
 
 import (
+	"github.com/hwcer/cosgo/binder"
 	"github.com/hwcer/cosgo/registry"
 	"github.com/hwcer/cosgo/values"
 	"github.com/hwcer/logger"
@@ -69,29 +70,36 @@ func (this *Handler) Metadata() string {
 	return strings.Join(arr, "&")
 }
 
+func (this *Handler) bytes(i any, bind binder.Interface) []byte {
+	v := values.NewMessage(i)
+	r, err := bind.Marshal(this)
+	if err != nil {
+		v.Format(0, err)
+		r, _ = bind.Marshal(this)
+	}
+	return r
+}
+
 func (this *Handler) Serialize(c *Context, reply interface{}) (err error) {
 	if this.serialize != nil {
-		reply, err = this.serialize(c, reply)
+		if reply, err = this.serialize(c, reply); err != nil {
+			return
+		}
 	}
-	if err != nil {
-		return c.WriteError(err)
-	}
-	var ok bool
 	var data []byte
-	if data, ok = reply.([]byte); !ok {
-		data, err = c.Binder.Marshal(values.NewMessage(reply))
+	switch v := reply.(type) {
+	case []byte:
+		data = v
+	default:
+		data = this.bytes(reply, c.Binder)
 	}
-	if err != nil {
-		return c.WriteError(err)
-	} else {
-		return c.Write(data)
-	}
+	return c.ctx.Write(data)
 }
 
 func (this *Handler) handle(node *registry.Node, c *Context) (reply interface{}, err error) {
 	defer func() {
 		if e := recover(); e != nil {
-			reply = values.NewError(500, "server recover error")
+			reply = values.Errorf(500, "server recover error")
 			logger.Error(e)
 		}
 	}()
