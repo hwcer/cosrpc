@@ -1,7 +1,6 @@
 package cosrpc
 
 import (
-	"github.com/hwcer/cosgo/binder"
 	"github.com/hwcer/cosgo/registry"
 	"github.com/hwcer/cosgo/values"
 	"github.com/hwcer/logger"
@@ -12,7 +11,7 @@ import (
 type HandlerFilter func(node *registry.Node) bool
 type HandlerCaller func(node *registry.Node, c *Context) (interface{}, error)
 type HandlerMetadata func() string
-type HandlerSerialize func(c *Context, reply interface{}) (interface{}, error)
+type HandlerSerialize func(c *Context, reply interface{}) ([]byte, error)
 
 type handleCaller interface {
 	Caller(node *registry.Node, c *Context) interface{}
@@ -70,31 +69,15 @@ func (this *Handler) Metadata() string {
 	return strings.Join(arr, "&")
 }
 
-func (this *Handler) bytes(i any, bind binder.Interface) []byte {
-	v := values.NewMessage(i)
-	r, err := bind.Marshal(this)
-	if err != nil {
-		v.Format(0, err)
-		r, _ = bind.Marshal(this)
-	}
-	return r
-}
-
-func (this *Handler) Serialize(c *Context, reply interface{}) (err error) {
-	if this.serialize != nil {
-		if reply, err = this.serialize(c, reply); err != nil {
-			return
-		}
-	}
-	var data []byte
-	switch v := reply.(type) {
-	case []byte:
-		data = v
-	default:
-		data = this.bytes(reply, c.Binder)
-	}
-	return c.ctx.Write(data)
-}
+//func (this *Handler) bytes(i any, bind binder.Interface) []byte {
+//	v := values.NewMessage(i)
+//	r, err := bind.Marshal(this)
+//	if err != nil {
+//		v.Format(0, err)
+//		r, _ = bind.Marshal(this)
+//	}
+//	return r
+//}
 
 func (this *Handler) handle(node *registry.Node, c *Context) (reply interface{}, err error) {
 	defer func() {
@@ -114,6 +97,18 @@ func (this *Handler) handle(node *registry.Node, c *Context) (reply interface{},
 	} else {
 		r := node.Call(c)
 		reply = r[0].Interface()
+	}
+	return
+}
+func (this *Handler) marshal(c *Context, reply interface{}) (data []byte, err error) {
+	if this.serialize != nil {
+		return this.serialize(c, reply)
+	}
+	switch v := reply.(type) {
+	case []byte:
+		data = v
+	default:
+		data, err = c.Binder.Marshal(reply)
 	}
 	return
 }
