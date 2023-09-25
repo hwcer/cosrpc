@@ -162,9 +162,9 @@ func (this *XClient) XCall(ctx context.Context, servicePath, serviceMethod strin
 	var msg *values.Message
 	var isReplyMsg bool
 	if reply == nil {
-		msg = values.NewMessage(nil)
+		msg = &values.Message{}
 	} else if msg, isReplyMsg = reply.(*values.Message); !isReplyMsg {
-		msg = values.NewMessage(nil)
+		msg = &values.Message{}
 	}
 	if err == nil {
 		err = this.Binder.Unmarshal(v, msg)
