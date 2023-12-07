@@ -27,7 +27,6 @@ func NewXServer() *XServer {
 
 type XServer struct {
 	*server.Server
-	jsonrpc  jsonrpcHandle
 	Binder   binder.Interface
 	Registry *registry.Registry
 }

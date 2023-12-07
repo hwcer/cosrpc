@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"github.com/hwcer/cosgo/binder"
 	"github.com/hwcer/cosgo/values"
-	"github.com/hwcer/cosrpc/jsonrpc"
 	"github.com/hwcer/logger"
 	"github.com/smallnest/rpcx/share"
 	"io"
@@ -28,11 +27,6 @@ type Context struct {
 	ctx    ctx
 	body   values.Values
 	Binder binder.Interface
-}
-
-func (this *Context) Jsonrpc(args *jsonrpc.Args) *Context {
-	c := jsonrpc.New(this.ctx, args)
-	return NewContext(c, this.Binder)
 }
 
 // Reader 返回一个io.Reader来读取包体
