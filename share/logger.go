@@ -1,4 +1,4 @@
-package cosrpc
+package share
 
 import (
 	"fmt"

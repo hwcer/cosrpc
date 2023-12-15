@@ -1,10 +1,11 @@
-package cosrpc
+package xserver
 
 import (
 	"errors"
 	"github.com/hwcer/cosgo/binder"
 	"github.com/hwcer/cosgo/registry"
 	"github.com/hwcer/cosgo/scc"
+	"github.com/hwcer/cosrpc/share"
 	"github.com/hwcer/logger"
 	"github.com/smallnest/rpcx/server"
 	"runtime/debug"
@@ -39,24 +40,27 @@ func (xs *XServer) handle(node *registry.Node) func(*server.Context) error {
 }
 
 // caller services入口
-func (xs *XServer) caller(sc *server.Context, node *registry.Node) error {
+func (xs *XServer) caller(sc *server.Context, node *registry.Node) (err error) {
 	defer func() {
 		if r := recover(); r != nil {
 			logger.Alert("rpcx server recover error:%v\n%v", r, string(debug.Stack()))
 		}
 	}()
-	handler, ok := node.Service.Handler.(*Handler)
+	handler, ok := node.Service.Handler.(*share.Handler)
 	if !ok {
 		return errors.New("handler unknown")
 	}
-	c := NewContext(sc, xs.Binder)
-	if reply, err := handler.handle(node, c); err != nil {
-		return err
-	} else if data, err := handler.marshal(c, reply); err != nil {
-		return err
-	} else {
-		return c.ctx.Write(data)
+	c := share.NewContext(sc, xs.Binder)
+	var reply any
+	reply, err = handler.Caller(node, c)
+	if err != nil {
+		return
 	}
+	var data []byte
+	if data, err = handler.Marshal(c, reply); err == nil {
+		return c.Write(data)
+	}
+	return
 }
 
 //func (this *XServer) Server() *server.Server {
@@ -66,9 +70,9 @@ func (xs *XServer) caller(sc *server.Context, node *registry.Node) error {
 func (xs *XServer) Service(name string, handler ...interface{}) *registry.Service {
 	service := xs.Registry.Service(name)
 	if service.Handler == nil {
-		service.Handler = &Handler{}
+		service.Handler = &share.Handler{}
 	}
-	if h, ok := service.Handler.(*Handler); ok {
+	if h, ok := service.Handler.(*share.Handler); ok {
 		for _, i := range handler {
 			h.Use(i)
 		}

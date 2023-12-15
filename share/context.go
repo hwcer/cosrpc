@@ -1,4 +1,4 @@
-package cosrpc
+package share
 
 import (
 	"bytes"
@@ -37,7 +37,9 @@ func (this *Context) Reader() io.Reader {
 func (this *Context) Bytes() []byte {
 	return this.ctx.Payload()
 }
-
+func (this *Context) Write(data []byte) error {
+	return this.ctx.Write(data)
+}
 func (this *Context) Bind(i interface{}) error {
 	data := this.ctx.Payload()
 	if len(data) == 0 {

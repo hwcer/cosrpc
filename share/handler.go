@@ -1,4 +1,4 @@
-package cosrpc
+package share
 
 import (
 	"github.com/hwcer/cosgo/registry"
@@ -79,7 +79,7 @@ func (this *Handler) Metadata() string {
 //	return r
 //}
 
-func (this *Handler) handle(node *registry.Node, c *Context) (reply interface{}, err error) {
+func (this *Handler) Caller(node *registry.Node, c *Context) (reply interface{}, err error) {
 	defer func() {
 		if e := recover(); e != nil {
 			reply = values.Errorf(500, "server recover error")
@@ -100,7 +100,7 @@ func (this *Handler) handle(node *registry.Node, c *Context) (reply interface{},
 	}
 	return
 }
-func (this *Handler) marshal(c *Context, reply interface{}) (data []byte, err error) {
+func (this *Handler) Marshal(c *Context, reply interface{}) (data []byte, err error) {
 	if this.serialize != nil {
 		return this.serialize(c, reply)
 	}
