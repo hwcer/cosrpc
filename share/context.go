@@ -5,8 +5,10 @@ import (
 	"github.com/hwcer/cosgo/binder"
 	"github.com/hwcer/cosgo/values"
 	"github.com/hwcer/logger"
+	"github.com/smallnest/rpcx/server"
 	"github.com/smallnest/rpcx/share"
 	"io"
+	"net"
 )
 
 type ctx interface {
@@ -27,6 +29,10 @@ type Context struct {
 	ctx    ctx
 	body   values.Values
 	Binder binder.Interface
+}
+
+func (this *Context) Conn() net.Conn {
+	return this.ctx.Get(server.RemoteConnContextKey).(net.Conn)
 }
 
 // Reader 返回一个io.Reader来读取包体
@@ -82,9 +88,17 @@ func (this *Context) GetInt64(key string) (val int64) {
 	v := this.values()
 	return v.GetInt64(key)
 }
+
 func (this *Context) GetString(key string) (val string) {
 	v := this.values()
 	return v.GetString(key)
+}
+
+func (this *Context) GetValue(key any) any {
+	return this.ctx.Get(key)
+}
+func (this *Context) SetValue(key, val any) {
+	this.ctx.SetValue(key, val)
 }
 func (this *Context) Metadata() map[string]string {
 	return this.ctx.Metadata()
