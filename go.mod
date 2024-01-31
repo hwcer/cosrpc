@@ -2,7 +2,6 @@ module github.com/hwcer/cosrpc
 
 go 1.18
 
-
 require (
 	github.com/hwcer/cosgo v0.0.5
 	github.com/hwcer/logger v0.0.5
