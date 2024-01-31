@@ -6,7 +6,7 @@ replace github.com/hwcer/cosgo v0.0.0 => ../cosgo
 
 require (
 	github.com/hwcer/cosgo v0.0.0
-	github.com/hwcer/logger v0.0.3
+	github.com/hwcer/logger v0.0.5
 	github.com/rcrowley/go-metrics v0.0.0-20201227073835-cf1acfcdf475
 	github.com/rpcxio/libkv v0.5.1
 	github.com/smallnest/rpcx v1.7.8
