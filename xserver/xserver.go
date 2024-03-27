@@ -3,10 +3,10 @@ package xserver
 import (
 	"errors"
 	"github.com/hwcer/cosgo/binder"
-	"github.com/hwcer/cosgo/registry"
-	"github.com/hwcer/cosgo/scc"
 	"github.com/hwcer/cosrpc/share"
 	"github.com/hwcer/logger"
+	"github.com/hwcer/registry"
+	"github.com/hwcer/scc"
 	"github.com/smallnest/rpcx/server"
 	"runtime/debug"
 	"time"

@@ -2,11 +2,11 @@ package cosrpc
 
 import (
 	"github.com/hwcer/cosgo"
-	"github.com/hwcer/cosgo/registry"
 	"github.com/hwcer/cosgo/utils"
 	"github.com/hwcer/cosrpc/redis"
 	"github.com/hwcer/cosrpc/xserver"
 	"github.com/hwcer/logger"
+	"github.com/hwcer/registry"
 )
 
 var Server = &rpcServer{XServer: xserver.NewXServer()}

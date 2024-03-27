@@ -3,8 +3,8 @@ package cosrpc
 import (
 	"context"
 	"github.com/hwcer/cosgo"
-	"github.com/hwcer/cosgo/registry"
 	"github.com/hwcer/cosrpc/share"
+	"github.com/hwcer/registry"
 	rpcxShare "github.com/smallnest/rpcx/share"
 	"strconv"
 	"time"
