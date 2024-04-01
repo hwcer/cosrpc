@@ -54,3 +54,11 @@ func CallWithMetadata(req, res xshare.Metadata, servicePath, serviceMethod strin
 func Broadcast(ctx context.Context, servicePath, serviceMethod string, args, reply any) (err error) {
 	return Default.Broadcast(ctx, servicePath, serviceMethod, args, reply)
 }
+
+func Start() (err error) {
+	return Default.Start()
+}
+
+func Close() (err error) {
+	return Default.Close()
+}

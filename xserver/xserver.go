@@ -23,7 +23,7 @@ type rpcxServiceHandlerMetadata interface {
 	Metadata() string
 }
 
-func NewXServer() *XServer {
+func New() *XServer {
 	r := &XServer{}
 	r.Server = server.NewServer()
 	r.Binder = binder.New(binder.MIMEJSON)
