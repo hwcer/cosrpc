@@ -16,15 +16,14 @@ const (
 var Options = &struct {
 	Rpcx    *rpcx
 	Service map[string]string `json:"service"`
-	Timeout int32             `json:"timeout"` //超时(s)
 }{
-	Rpcx:    &rpcx{Network: "tcp", Address: ":8100"},
+	Rpcx:    &rpcx{Network: "tcp", Address: ":8100", Timeout: 5},
 	Service: make(map[string]string),
-	Timeout: 5,
 }
 
 type rpcx struct {
 	Redis    string //服务发现
+	Timeout  int32  `json:"timeout"` //超时(s)
 	Network  string
 	Address  string
 	BasePath string
@@ -33,7 +32,7 @@ type rpcx struct {
 var serverAddressPrefix string
 
 func Timeout() time.Duration {
-	return time.Second * time.Duration(Options.Timeout)
+	return time.Second * time.Duration(Options.Rpcx.Timeout)
 }
 
 func RpcAddressPrefix() string {
