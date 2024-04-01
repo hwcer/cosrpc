@@ -3,7 +3,9 @@ package xserver
 import (
 	"errors"
 	"github.com/hwcer/cosgo/binder"
-	"github.com/hwcer/cosrpc/share"
+	"github.com/hwcer/cosgo/utils"
+	"github.com/hwcer/cosrpc/redis"
+	"github.com/hwcer/cosrpc/xshare"
 	"github.com/hwcer/logger"
 	"github.com/hwcer/registry"
 	"github.com/hwcer/scc"
@@ -15,6 +17,10 @@ import (
 // Caller struct自带的Caller
 type Caller interface {
 	Caller(c *server.Context, node *registry.Node) interface{}
+}
+
+type rpcxServiceHandlerMetadata interface {
+	Metadata() string
 }
 
 func NewXServer() *XServer {
@@ -30,6 +36,8 @@ type XServer struct {
 	*server.Server
 	Binder   binder.Interface
 	Registry *registry.Registry
+	//address  *utils.Address
+	register *redis.RedisRegisterPlugin
 }
 
 // rpcxHandle 闭包绑定 route和Node
@@ -46,11 +54,11 @@ func (xs *XServer) caller(sc *server.Context, node *registry.Node) (err error) {
 			logger.Alert("rpcx server recover error:%v\n%v", r, string(debug.Stack()))
 		}
 	}()
-	handler, ok := node.Service.Handler.(*share.Handler)
+	handler, ok := node.Service.Handler.(*xshare.Handler)
 	if !ok {
 		return errors.New("handler unknown")
 	}
-	c := share.NewContext(sc, xs.Binder)
+	c := xshare.NewContext(sc, xs.Binder)
 	var reply any
 	reply, err = handler.Caller(node, c)
 	if err != nil {
@@ -70,9 +78,9 @@ func (xs *XServer) caller(sc *server.Context, node *registry.Node) (err error) {
 func (xs *XServer) Service(name string, handler ...interface{}) *registry.Service {
 	service := xs.Registry.Service(name)
 	if service.Handler == nil {
-		service.Handler = &share.Handler{}
+		service.Handler = &xshare.Handler{}
 	}
-	if h, ok := service.Handler.(*share.Handler); ok {
+	if h, ok := service.Handler.(*xshare.Handler); ok {
 		for _, i := range handler {
 			h.Use(i)
 		}
@@ -80,13 +88,33 @@ func (xs *XServer) Service(name string, handler ...interface{}) *registry.Servic
 	return service
 }
 
-func (xs *XServer) Start(network, address string) (err error) {
+func (xs *XServer) Start() (err error) {
+	if xs.Registry.Len() == 0 {
+		return
+	}
+	address := xs.Address()
+	defer func() {
+		if err == nil {
+			logger.Trace("rpc server started %v", address.String())
+		}
+	}()
 	//启动服务
 	xs.Registry.Nodes(func(node *registry.Node) (r bool) {
 		xs.Server.AddHandler(node.Service.Name(), node.Name(), xs.handle(node))
 		return true
 	})
 
+	err = address.Handle(func(network, address string) error {
+		return xs.startServe(network, address)
+	})
+	if err != nil {
+		return
+	}
+
+	return xs.startRegister(address)
+}
+
+func (xs *XServer) startServe(network, address string) (err error) {
 	//this.Server.Plugins.Add(register)
 	err = scc.Timeout(time.Second, func() error {
 		return xs.Server.Serve(network, address)
@@ -97,7 +125,51 @@ func (xs *XServer) Start(network, address string) (err error) {
 	return
 }
 
-func (xs *XServer) Close() error {
-	_ = xs.Server.Shutdown(nil)
-	return nil
+func (xs *XServer) startRegister(address *utils.Address) (err error) {
+	if xshare.Options.Rpcx.Redis == "" {
+		return
+	}
+	//注册服务,实现 rpcxServiceHandlerMetadata 才具有服务发现功能
+	service := map[string]string{}
+	xs.Registry.Range(func(s *registry.Service) bool {
+		name := s.Name()
+		if mf, ok := s.Handler.(rpcxServiceHandlerMetadata); ok {
+			service[name] = mf.Metadata()
+		}
+		return true
+	})
+	if len(service) == 0 {
+		return
+	}
+	if xs.register, err = xshare.Register(address, xshare.Options.Rpcx.BasePath); err != nil {
+		return
+	}
+	for name, metadata := range service {
+		if err = xs.register.Register(name, nil, metadata); err != nil {
+			return err
+		}
+	}
+	return xs.register.Start()
+}
+
+func (xs *XServer) Close() (err error) {
+	if err = xs.Server.Shutdown(nil); err != nil {
+		return
+	}
+	if xs.register != nil {
+		err = xs.register.Stop()
+	}
+	return
+}
+
+func (xs *XServer) Address() *utils.Address {
+	address := utils.NewAddress(xshare.Options.Rpcx.Address)
+	if address.Retry == 0 {
+		address.Retry = 100
+	}
+	if address.Host == "" {
+		address.Host, _ = xshare.LocalIpv4()
+	}
+	address.Scheme = xshare.Options.Rpcx.Network
+	return address
 }

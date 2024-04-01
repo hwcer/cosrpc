@@ -4,9 +4,11 @@ import (
 	"fmt"
 	"github.com/smallnest/rpcx/client"
 	"github.com/smallnest/rpcx/protocol"
+	"sync/atomic"
 )
 
 type Client struct {
+	start       int32
 	client      client.XClient
 	Option      client.Option
 	FailMode    client.FailMode
@@ -15,7 +17,10 @@ type Client struct {
 	ServicePath string
 }
 
-func (this *Client) Start(discovery RegistryDiscovery, ch chan *protocol.Message) (err error) {
+func (this *Client) Start(discovery Discovery, ch chan *protocol.Message) (err error) {
+	if !atomic.CompareAndSwapInt32(&this.start, 0, 1) {
+		return fmt.Errorf("client started:%v", this.ServicePath)
+	}
 	switch v := this.Selector.(type) {
 	case string:
 		err = this.Peer2Peer(v, ch)
@@ -75,7 +80,7 @@ func (this *Client) Multiple(address []string, ch chan *protocol.Message) (err e
 }
 
 // Registry 使用注册中心
-func (this *Client) Registry(selectMod client.SelectMode, selector client.Selector, registry RegistryDiscovery, ch chan *protocol.Message) (err error) {
+func (this *Client) Registry(selectMod client.SelectMode, selector client.Selector, registry Discovery, ch chan *protocol.Message) (err error) {
 	if c := this.client; c != nil {
 		defer func() {
 			_ = c.Close()

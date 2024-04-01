@@ -1,4 +1,4 @@
-package share
+package xshare
 
 import (
 	"bytes"

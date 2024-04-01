@@ -1,4 +1,4 @@
-package share
+package xshare
 
 import (
 	"github.com/hwcer/cosgo/values"

@@ -1,13 +1,13 @@
-package cosrpc
+package xshare
 
 import (
 	"fmt"
 	"github.com/hwcer/cosgo/utils"
 	"strings"
+	"time"
 )
 
 const (
-	SelectorTypeLocal     = "local"     //单机版
 	SelectorTypeProcess   = "process"   //进程内访问
 	SelectorTypeDiscovery = "discovery" //服务发现
 )
@@ -15,10 +15,12 @@ const (
 // Options Etcd Redis 二选一
 var Options = &struct {
 	Rpcx    *rpcx
-	Service map[string]string
+	Service map[string]string `json:"service"`
+	Timeout int32             `json:"timeout"` //超时(s)
 }{
 	Rpcx:    &rpcx{Network: "tcp", Address: ":8100"},
 	Service: make(map[string]string),
+	Timeout: 5,
 }
 
 type rpcx struct {
@@ -29,6 +31,10 @@ type rpcx struct {
 }
 
 var serverAddressPrefix string
+
+func Timeout() time.Duration {
+	return time.Second * time.Duration(Options.Timeout)
+}
 
 func RpcAddressPrefix() string {
 	if serverAddressPrefix == "" {

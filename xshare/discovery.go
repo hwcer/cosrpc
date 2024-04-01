@@ -1,4 +1,4 @@
-package cosrpc
+package xshare
 
 import (
 	"fmt"
@@ -14,7 +14,24 @@ import (
 var rpcxRegister *redis.RedisRegisterPlugin
 var rpcxDiscovery client.ServiceDiscovery
 
-func getRpcRegister(urlRpcxAddr *utils.Address, basePath string) (*redis.RedisRegisterPlugin, error) {
+func Discovery() (client.ServiceDiscovery, error) {
+	servicePath := "/"
+	if rpcxDiscovery != nil {
+		return rpcxDiscovery, nil
+	}
+	address, options, err := getRedisAddress()
+	if err != nil {
+		return nil, err
+	}
+	rpcxDiscovery, err = redis.NewRedisDiscovery(Options.Rpcx.BasePath, servicePath, address, options)
+	if err != nil {
+		return nil, err
+	}
+	rpcxDiscovery.SetFilter(serviceDiscoveryFilter)
+	return rpcxDiscovery, nil
+}
+
+func Register(urlRpcxAddr *utils.Address, basePath string) (*redis.RedisRegisterPlugin, error) {
 	if rpcxRegister != nil {
 		return rpcxRegister, nil
 	}
@@ -30,23 +47,6 @@ func getRpcRegister(urlRpcxAddr *utils.Address, basePath string) (*redis.RedisRe
 		UpdateInterval: time.Second * 10,
 	}
 	return rpcxRegister, nil
-}
-
-func getRpcDiscovery() (client.ServiceDiscovery, error) {
-	servicePath := "/"
-	if rpcxDiscovery != nil {
-		return rpcxDiscovery, nil
-	}
-	address, options, err := getRedisAddress()
-	if err != nil {
-		return nil, err
-	}
-	rpcxDiscovery, err = redis.NewRedisDiscovery(Options.Rpcx.BasePath, servicePath, address, options)
-	if err != nil {
-		return nil, err
-	}
-	rpcxDiscovery.SetFilter(serviceDiscoveryFilter)
-	return rpcxDiscovery, nil
 }
 
 func serviceDiscoveryFilter(kv *client.KVPair) bool {

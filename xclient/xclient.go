@@ -6,45 +6,48 @@ import (
 	"fmt"
 	"github.com/hwcer/cosgo/binder"
 	"github.com/hwcer/cosgo/values"
-	"github.com/hwcer/cosrpc/share"
+	"github.com/hwcer/cosrpc/xshare"
 	"github.com/hwcer/logger"
 	"github.com/hwcer/registry"
 	"github.com/hwcer/scc"
 	"github.com/smallnest/rpcx/client"
 	"github.com/smallnest/rpcx/protocol"
+	"github.com/smallnest/rpcx/share"
 	"reflect"
 	"runtime/debug"
+	"strings"
 	"sync"
 	"time"
 )
 
-// 注册中心服务发现,点对点或者点对多时无需设置
-type RegistryDiscovery func() (client.ServiceDiscovery, error)
+// Discovery 注册中心服务发现,点对点或者点对多时无需设置
+type Discovery func() (client.ServiceDiscovery, error)
 
-func NewXClient() *XClient {
+func New(ctx context.Context) *XClient {
 	return &XClient{
-		clients:  make(map[string]*Client),
-		Binder:   binder.New(binder.MIMEJSON),
-		Registry: registry.New(nil),
+		scc:       scc.New(ctx),
+		clients:   make(map[string]*Client),
+		Binder:    binder.New(binder.MIMEJSON),
+		Registry:  registry.New(nil),
+		Discovery: xshare.Discovery,
 	}
 }
 
 type XClient struct {
+	scc       *scc.SCC
 	mutex     sync.Mutex
-	started   bool
+	start     bool
 	clients   map[string]*Client
 	message   chan *protocol.Message
 	Binder    binder.Interface
 	Registry  *registry.Registry
-	Discovery RegistryDiscovery
+	Discovery Discovery
 }
 
-// AddServicePath 观察服务器信息
-func (xc *XClient) AddServicePath(servicePath string, selector any) (c *Client, err error) {
-	xc.mutex.Lock()
-	defer xc.mutex.Unlock()
+// addServicePath 观察服务器信息
+func (xc *XClient) addServicePath(servicePath string, selector any) (c *Client, err error) {
 	exist := xc.clients[servicePath]
-	if exist != nil && share.Equal(exist.Selector, selector) {
+	if exist != nil && xshare.Equal(exist.Selector, selector) {
 		c = exist
 		return
 	}
@@ -54,38 +57,42 @@ func (xc *XClient) AddServicePath(servicePath string, selector any) (c *Client, 
 	c.Selector = selector
 	c.ServicePath = servicePath
 	c.Option.SerializeType = protocol.SerializeNone
-	if xc.started {
-		if err = c.Start(xc.Discovery, xc.message); err != nil {
-			return
-		}
-	}
 	clients := map[string]*Client{}
 	for k, v := range xc.clients {
 		clients[k] = v
 	}
 	clients[servicePath] = c
 	xc.clients = clients
-
+	if !xc.start {
+		return
+	}
 	if exist != nil {
-		//服务重定向，关闭旧的client
 		time.AfterFunc(5*time.Second, func() {
 			_ = exist.client.Close()
 		})
 	}
+	err = c.Start(xc.Discovery, xc.message)
 	return
 }
 
 func (xc *XClient) Start() (err error) {
 	xc.mutex.Lock()
 	defer xc.mutex.Unlock()
-	if xc.started {
+	if xc.start {
 		return
 	}
-	xc.started = true
+	defer func() {
+		xc.start = true
+	}()
+
+	if err = xc.reload(); err != nil {
+		return
+	}
+
 	if xc.Registry.Len() > 0 {
 		xc.message = make(chan *protocol.Message, 1024)
 		for i := 0; i < 10; i++ {
-			scc.CGO(xc.worker)
+			xc.scc.CGO(xc.worker)
 		}
 	}
 	for _, c := range xc.clients {
@@ -97,12 +104,21 @@ func (xc *XClient) Start() (err error) {
 }
 
 func (xc *XClient) Close() (err error) {
+	if !xc.scc.Cancel() {
+		return
+	}
 	for _, c := range xc.clients {
 		if err = c.client.Close(); err != nil {
 			return
 		}
 	}
-	return
+	return xc.scc.Wait(time.Second)
+}
+
+func (xc *XClient) Reload() (err error) {
+	xc.mutex.Lock()
+	defer xc.mutex.Unlock()
+	return xc.reload()
 }
 
 func (xc *XClient) Has(servicePath string) bool {
@@ -125,30 +141,34 @@ func (xc *XClient) Client(servicePath string) client.XClient {
 	}
 }
 
-func (xc *XClient) Call(ctx context.Context, servicePath, serviceMethod string, args, reply interface{}) (err error) {
-	if ctx == nil {
-		ctx = context.Background()
-	}
-	if c := xc.Client(servicePath); c != nil {
-		return c.Call(ctx, serviceMethod, args, reply)
-	} else {
+func (xc *XClient) Call(ctx context.Context, servicePath, serviceMethod string, args, reply any) (err error) {
+	c := xc.Client(servicePath)
+	if c == nil {
 		return fmt.Errorf("can not found any server:%v", servicePath)
 	}
+	if ctx == nil {
+		var cancel context.CancelFunc
+		ctx, cancel = xc.scc.WithTimeout(xshare.Timeout())
+		defer cancel()
+	}
+	return c.Call(ctx, serviceMethod, args, reply)
 }
 
-func (xc *XClient) Broadcast(ctx context.Context, servicePath, serviceMethod string, args, reply interface{}) (err error) {
+func (xc *XClient) Broadcast(ctx context.Context, servicePath, serviceMethod string, args, reply any) (err error) {
+	c := xc.Client(servicePath)
+	if c == nil {
+		return fmt.Errorf("can not found any server:%v", servicePath)
+	}
 	if ctx == nil {
-		ctx = context.Background()
+		var cancel context.CancelFunc
+		ctx, cancel = xc.scc.WithTimeout(xshare.Timeout())
+		defer cancel()
 	}
-	if c := xc.Client(servicePath); c != nil {
-		return c.Broadcast(ctx, serviceMethod, args, reply)
-	} else {
-		return fmt.Errorf("服务不存在")
-	}
+	return c.Broadcast(ctx, serviceMethod, args, reply)
 }
 
 // XCall 使用默认的message发起请求
-func (xc *XClient) XCall(ctx context.Context, servicePath, serviceMethod string, args interface{}, reply interface{}) error {
+func (xc *XClient) XCall(ctx context.Context, servicePath, serviceMethod string, args any, reply any) error {
 	if reply != nil && reflect.TypeOf(reply).Kind() != reflect.Ptr {
 		return errors.New("client.call reply must pointer")
 	}
@@ -198,7 +218,16 @@ func (xc *XClient) XCall(ctx context.Context, servicePath, serviceMethod string,
 }
 
 // Async 异步
-func (xc *XClient) Async(ctx context.Context, servicePath, serviceMethod string, args interface{}) (err error) {
+func (xc *XClient) Async(ctx context.Context, servicePath, serviceMethod string, args any) (done *client.Call, err error) {
+	c := xc.Client(servicePath)
+	if c == nil {
+		return nil, fmt.Errorf("can not found any server:%v", servicePath)
+	}
+	if ctx == nil {
+		var cancel context.CancelFunc
+		ctx, cancel = xc.scc.WithTimeout(xshare.Timeout())
+		defer cancel()
+	}
 	var data []byte
 	if v, ok := args.([]byte); ok {
 		data = v
@@ -206,22 +235,30 @@ func (xc *XClient) Async(ctx context.Context, servicePath, serviceMethod string,
 		data, err = xc.Binder.Marshal(args)
 	}
 	if err != nil {
-		return err
+		return nil, err
 	}
-	if c := xc.Client(servicePath); c != nil {
-		_, err = c.Go(ctx, serviceMethod, data, nil, nil)
-	} else {
-		err = client.ErrXClientNoServer
-	}
-	return err
+	return c.Go(ctx, serviceMethod, data, nil, nil)
 }
 
+func (xc *XClient) CallWithMetadata(req, res xshare.Metadata, servicePath, serviceMethod string, args, reply any) (err error) {
+	ctx, cancel := xc.scc.WithTimeout(xshare.Timeout())
+	defer cancel()
+	if req != nil {
+		ctx = context.WithValue(ctx, share.ReqMetaDataKey, req)
+	}
+	if res != nil {
+		ctx = context.WithValue(ctx, share.ResMetaDataKey, res)
+	}
+	return xc.XCall(ctx, servicePath, serviceMethod, args, reply)
+}
+
+// Service 注册服务处理 server 端推送消息
 func (xc *XClient) Service(name string, handler ...interface{}) *registry.Service {
 	service := xc.Registry.Service(name)
 	if service.Handler == nil {
-		service.Handler = &share.Handler{}
+		service.Handler = &xshare.Handler{}
 	}
-	if h, ok := service.Handler.(*share.Handler); ok {
+	if h, ok := service.Handler.(*xshare.Handler); ok {
 		for _, i := range handler {
 			h.Use(i)
 		}
@@ -255,14 +292,36 @@ func (xc *XClient) handle(msg *protocol.Message) {
 		return
 	}
 
-	handler, ok := node.Service.Handler.(*share.Handler)
+	handler, ok := node.Service.Handler.(*xshare.Handler)
 	if !ok {
 		logger.Debug("XClient Service handler unknown")
 		return
 	}
 
-	c := share.NewContext(&Context{Message: msg}, xc.Binder)
+	c := xshare.NewContext(&Context{Message: msg}, xc.Binder)
 	if _, err := handler.Caller(node, c); err != nil {
 		logger.Debug(err)
 	}
+}
+
+func (xc *XClient) reload() (err error) {
+	for name, value := range xshare.Options.Service {
+		if selector := xc.selector(name, value); selector == nil {
+			return values.Errorf(0, "Service config error:%v %v", name, value)
+		} else if _, err = xc.addServicePath(name, selector); err != nil {
+			return
+		}
+	}
+	return
+}
+
+func (xc *XClient) selector(k, v string) (r any) {
+	if strings.ToLower(v) == xshare.SelectorTypeDiscovery {
+		return xshare.NewSelector(k)
+	} else if strings.Contains(v, ",") {
+		r = strings.Split(v, ",")
+	} else {
+		r = v
+	}
+	return
 }
