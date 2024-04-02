@@ -2,6 +2,7 @@ package xclient
 
 import (
 	"fmt"
+	"github.com/hwcer/cosrpc/xshare"
 	"github.com/smallnest/rpcx/client"
 	"github.com/smallnest/rpcx/protocol"
 	"sync/atomic"
@@ -38,7 +39,7 @@ func (this *Client) Start(discovery Discovery, ch chan *protocol.Message) (err e
 
 // Peer2Peer 点对点
 func (this *Client) Peer2Peer(address string, ch chan *protocol.Message) error {
-	discovery, err := client.NewPeer2PeerDiscovery("tcp@"+address, "")
+	discovery, err := client.NewPeer2PeerDiscovery(xshare.AddressFormat(address), "")
 	if err != nil {
 		return err
 	}
@@ -54,7 +55,7 @@ func (this *Client) Peer2Peer(address string, ch chan *protocol.Message) error {
 func (this *Client) Multiple(address []string, ch chan *protocol.Message) (err error) {
 	var pairs []*client.KVPair
 	for _, addr := range address {
-		pairs = append(pairs, &client.KVPair{Key: fmt.Sprintf("tcp@%v", addr)})
+		pairs = append(pairs, &client.KVPair{Key: xshare.AddressFormat(addr)})
 	}
 	if c := this.client; c != nil {
 		if discovery, ok := this.Discovery.(*client.MultipleServersDiscovery); ok {

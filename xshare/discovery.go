@@ -23,7 +23,7 @@ func Discovery() (client.ServiceDiscovery, error) {
 	if err != nil {
 		return nil, err
 	}
-	rpcxDiscovery, err = redis.NewRedisDiscovery(Options.Rpcx.BasePath, servicePath, address, options)
+	rpcxDiscovery, err = redis.NewRedisDiscovery(Options.BasePath, servicePath, address, options)
 	if err != nil {
 		return nil, err
 	}
@@ -31,7 +31,7 @@ func Discovery() (client.ServiceDiscovery, error) {
 	return rpcxDiscovery, nil
 }
 
-func Register(urlRpcxAddr *utils.Address, basePath string) (*redis.RedisRegisterPlugin, error) {
+func Register(urlRpcxAddr *utils.Address) (*redis.RedisRegisterPlugin, error) {
 	if rpcxRegister != nil {
 		return rpcxRegister, nil
 	}
@@ -40,9 +40,9 @@ func Register(urlRpcxAddr *utils.Address, basePath string) (*redis.RedisRegister
 		return nil, err
 	}
 	rpcxRegister = &redis.RedisRegisterPlugin{
-		ServiceAddress: fmt.Sprintf("%v%v:%v", RpcAddressPrefix(), urlRpcxAddr.Host, urlRpcxAddr.Port),
+		ServiceAddress: fmt.Sprintf("%v%v:%v", AddressPrefix(), urlRpcxAddr.Host, urlRpcxAddr.Port),
 		RedisServers:   address,
-		BasePath:       basePath,
+		BasePath:       Options.BasePath,
 		Options:        options,
 		UpdateInterval: time.Second * 10,
 	}
@@ -50,12 +50,12 @@ func Register(urlRpcxAddr *utils.Address, basePath string) (*redis.RedisRegister
 }
 
 func serviceDiscoveryFilter(kv *client.KVPair) bool {
-	return strings.Contains(kv.Key, RpcAddressPrefix())
+	return strings.Contains(kv.Key, AddressPrefix())
 }
 
 func getRedisAddress() (address []string, opts *store.Config, err error) {
 	var uri *url.URL
-	uri, err = utils.NewUrl(Options.Rpcx.Redis, "tcp")
+	uri, err = utils.NewUrl(Options.Redis, "tcp")
 	if err != nil {
 		return
 	}

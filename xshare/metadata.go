@@ -5,6 +5,16 @@ import (
 	"strconv"
 )
 
+const (
+	//ServicesMetadataVersion      = "ver"
+	ServicesMetadataAverage = "Average"
+	//ServicesMetadataServerId     = "sid"
+
+	ServicesMetadataRpcServerId      = "_rpc_srv_id"   //服务器编号
+	ServicesMetadataRpcServerAddress = "_rpc_srv_addr" //rpc服务器ID,selector 中固定转发地址
+	//ServicesMetadataNetRequestId = "_net_req_id"
+)
+
 // NewMetadata 创建新Metadata，参数k1,v1,k2,v2...
 func NewMetadata(args ...string) Metadata {
 	r := Metadata{}
@@ -19,7 +29,7 @@ func NewMetadata(args ...string) Metadata {
 type Metadata map[string]string
 
 func (this Metadata) SetAddress(v string) {
-	this[ServicesMetadataRpcAddress] = v
+	this[ServicesMetadataRpcServerAddress] = v
 }
 
 func (this Metadata) SetServerId(v int32) {
@@ -27,4 +37,8 @@ func (this Metadata) SetServerId(v int32) {
 }
 func (this Metadata) SetContentType(v string) {
 	this[binder.ContentType] = v
+}
+
+func (this Metadata) Json() map[string]string {
+	return this
 }

@@ -244,10 +244,10 @@ func (xc *XClient) CallWithMetadata(req, res xshare.Metadata, servicePath, servi
 	ctx, cancel := xc.scc.WithTimeout(xshare.Timeout())
 	defer cancel()
 	if req != nil {
-		ctx = context.WithValue(ctx, share.ReqMetaDataKey, req)
+		ctx = context.WithValue(ctx, share.ReqMetaDataKey, req.Json())
 	}
 	if res != nil {
-		ctx = context.WithValue(ctx, share.ResMetaDataKey, res)
+		ctx = context.WithValue(ctx, share.ResMetaDataKey, res.Json())
 	}
 	return xc.XCall(ctx, servicePath, serviceMethod, args, reply)
 }
@@ -305,7 +305,7 @@ func (xc *XClient) handle(msg *protocol.Message) {
 }
 
 func (xc *XClient) reload() (err error) {
-	for name, value := range xshare.Options.Service {
+	for name, value := range xshare.Service {
 		if selector := xc.selector(name, value); selector == nil {
 			return values.Errorf(0, "Service config error:%v %v", name, value)
 		} else if _, err = xc.addServicePath(name, selector); err != nil {
@@ -316,8 +316,10 @@ func (xc *XClient) reload() (err error) {
 }
 
 func (xc *XClient) selector(k, v string) (r any) {
-	if strings.ToLower(v) == xshare.SelectorTypeDiscovery {
+	if s := strings.ToLower(v); s == xshare.SelectorTypeDiscovery {
 		return xshare.NewSelector(k)
+	} else if s == xshare.SelectorTypeLocal {
+		return xshare.Address().String()
 	} else if strings.Contains(v, ",") {
 		r = strings.Split(v, ",")
 	} else {

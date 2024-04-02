@@ -11,6 +11,7 @@ import (
 	"github.com/hwcer/scc"
 	"github.com/smallnest/rpcx/server"
 	"runtime/debug"
+	"sync/atomic"
 	"time"
 )
 
@@ -34,9 +35,9 @@ func New() *XServer {
 
 type XServer struct {
 	*server.Server
+	start    int32
 	Binder   binder.Interface
 	Registry *registry.Registry
-	//address  *utils.Address
 	register *redis.RedisRegisterPlugin
 }
 
@@ -92,12 +93,12 @@ func (xs *XServer) Start() (err error) {
 	if xs.Registry.Len() == 0 {
 		return
 	}
-	address := xs.Address()
-	defer func() {
-		if err == nil {
-			logger.Trace("rpc server started %v", address.String())
-		}
-	}()
+	if !atomic.CompareAndSwapInt32(&xs.start, 0, 1) {
+		return
+	}
+
+	address := xshare.Address()
+
 	//启动服务
 	xs.Registry.Nodes(func(node *registry.Node) (r bool) {
 		xs.Server.AddHandler(node.Service.Name(), node.Name(), xs.handle(node))
@@ -111,7 +112,11 @@ func (xs *XServer) Start() (err error) {
 		return
 	}
 
-	return xs.startRegister(address)
+	if err = xs.startRegister(address); err != nil {
+		return
+	}
+	logger.Trace("rpc server started:%v", address.String())
+	return
 }
 
 func (xs *XServer) startServe(network, address string) (err error) {
@@ -126,7 +131,7 @@ func (xs *XServer) startServe(network, address string) (err error) {
 }
 
 func (xs *XServer) startRegister(address *utils.Address) (err error) {
-	if xshare.Options.Rpcx.Redis == "" {
+	if xshare.Options.Redis == "" {
 		return
 	}
 	//注册服务,实现 rpcxServiceHandlerMetadata 才具有服务发现功能
@@ -141,7 +146,7 @@ func (xs *XServer) startRegister(address *utils.Address) (err error) {
 	if len(service) == 0 {
 		return
 	}
-	if xs.register, err = xshare.Register(address, xshare.Options.Rpcx.BasePath); err != nil {
+	if xs.register, err = xshare.Register(address); err != nil {
 		return
 	}
 	for name, metadata := range service {
@@ -163,13 +168,13 @@ func (xs *XServer) Close() (err error) {
 }
 
 func (xs *XServer) Address() *utils.Address {
-	address := utils.NewAddress(xshare.Options.Rpcx.Address)
+	address := utils.NewAddress(xshare.Options.Address)
 	if address.Retry == 0 {
 		address.Retry = 100
 	}
 	if address.Host == "" {
 		address.Host, _ = xshare.LocalIpv4()
 	}
-	address.Scheme = xshare.Options.Rpcx.Network
+	address.Scheme = xshare.Options.Network
 	return address
 }
