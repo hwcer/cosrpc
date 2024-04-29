@@ -3,10 +3,10 @@ module github.com/hwcer/cosrpc
 go 1.21.5
 
 require (
-	github.com/hwcer/cosgo v1.0.2
+	github.com/hwcer/cosgo v1.0.5
 	github.com/hwcer/logger v0.0.5
 	github.com/hwcer/registry v0.0.6
-	github.com/hwcer/scc v0.0.5
+	github.com/hwcer/scc v0.0.6
 	github.com/rcrowley/go-metrics v0.0.0-20201227073835-cf1acfcdf475
 	github.com/rpcxio/libkv v0.5.1
 	github.com/smallnest/rpcx v1.8.26
@@ -38,7 +38,7 @@ require (
 	github.com/hashicorp/errwrap v1.1.0 // indirect
 	github.com/hashicorp/go-multierror v1.1.1 // indirect
 	github.com/hashicorp/golang-lru v1.0.2 // indirect
-	github.com/hwcer/schema v0.0.2 // indirect
+	github.com/hwcer/schema v0.0.3 // indirect
 	github.com/jamiealquiza/tachymeter v2.0.0+incompatible // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
 	github.com/juju/ratelimit v1.0.2 // indirect
