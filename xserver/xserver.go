@@ -38,7 +38,7 @@ type XServer struct {
 	start    int32
 	Binder   binder.Interface
 	Registry *registry.Registry
-	register *redis.RedisRegisterPlugin
+	register *redis.Register
 }
 
 // rpcxHandle 闭包绑定 route和Node

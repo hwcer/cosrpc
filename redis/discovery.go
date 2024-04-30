@@ -18,9 +18,9 @@ func init() {
 	redis.Register()
 }
 
-// RedisDiscovery is a redis service discovery.
+// Discovery is a redis service discovery.
 // It always returns the registered servers in redis.
-type RedisDiscovery struct {
+type Discovery struct {
 	basePath string
 	kv       store.Store
 	pairsMu  sync.RWMutex
@@ -34,24 +34,24 @@ type RedisDiscovery struct {
 	stopCh                  chan struct{}
 }
 
-// NewRedisDiscovery returns a new RedisDiscovery.
-func NewRedisDiscovery(basePath string, servicePath string, redisAddr []string, options *store.Config) (*RedisDiscovery, error) {
+// NewDiscovery returns a new Discovery.
+func NewDiscovery(basePath string, servicePath string, redisAddr []string, options *store.Config) (*Discovery, error) {
 	kv, err := libkv.NewStore(store.REDIS, redisAddr, options)
 	if err != nil {
 		log.Infof("cannot create store: %v", err)
 		return nil, err
 	}
 
-	return NewRedisDiscoveryStore(basePath+"/"+servicePath, kv)
+	return NewDiscoveryStore(basePath+"/"+servicePath, kv)
 }
 
-// NewRedisDiscoveryStore return a new RedisDiscovery with specified store.
-func NewRedisDiscoveryStore(basePath string, kv store.Store) (*RedisDiscovery, error) {
+// NewDiscoveryStore return a new Discovery with specified store.
+func NewDiscoveryStore(basePath string, kv store.Store) (*Discovery, error) {
 	if len(basePath) > 1 && strings.HasSuffix(basePath, "/") {
 		basePath = basePath[:len(basePath)-1]
 	}
 
-	d := &RedisDiscovery{basePath: basePath, kv: kv}
+	d := &Discovery{basePath: basePath, kv: kv}
 	d.stopCh = make(chan struct{})
 
 	ps, err := kv.List(basePath)
@@ -65,8 +65,8 @@ func NewRedisDiscoveryStore(basePath string, kv store.Store) (*RedisDiscovery, e
 	return d, nil
 }
 
-// NewRedisDiscoveryTemplate returns a new RedisDiscovery template.
-func NewRedisDiscoveryTemplate(basePath string, redisAddr []string, options *store.Config) (*RedisDiscovery, error) {
+// NewRedisDiscoveryTemplate returns a new Discovery template.
+func NewRedisDiscoveryTemplate(basePath string, redisAddr []string, options *store.Config) (*Discovery, error) {
 	if len(basePath) > 1 && strings.HasSuffix(basePath, "/") {
 		basePath = basePath[:len(basePath)-1]
 	}
@@ -77,21 +77,21 @@ func NewRedisDiscoveryTemplate(basePath string, redisAddr []string, options *sto
 		return nil, err
 	}
 
-	return NewRedisDiscoveryStore(basePath, kv)
+	return NewDiscoveryStore(basePath, kv)
 }
 
 // Clone clones this ServiceDiscovery with new servicePath.
-func (d *RedisDiscovery) Clone(servicePath string) (client.ServiceDiscovery, error) {
-	return NewRedisDiscoveryStore(d.basePath+"/"+servicePath, d.kv)
+func (d *Discovery) Clone(servicePath string) (client.ServiceDiscovery, error) {
+	return NewDiscoveryStore(d.basePath+"/"+servicePath, d.kv)
 }
 
 // SetFilter sets the filer.
-func (d *RedisDiscovery) SetFilter(filter client.ServiceDiscoveryFilter) {
+func (d *Discovery) SetFilter(filter client.ServiceDiscoveryFilter) {
 	d.filter = filter
 }
 
 // GetServices returns the servers
-func (d *RedisDiscovery) GetServices() []*client.KVPair {
+func (d *Discovery) GetServices() []*client.KVPair {
 	d.pairsMu.RLock()
 	defer d.pairsMu.RUnlock()
 
@@ -99,7 +99,7 @@ func (d *RedisDiscovery) GetServices() []*client.KVPair {
 }
 
 // WatchService returns a nil chan.
-func (d *RedisDiscovery) WatchService() chan []*client.KVPair {
+func (d *Discovery) WatchService() chan []*client.KVPair {
 	d.mu.Lock()
 	defer d.mu.Unlock()
 
@@ -108,7 +108,7 @@ func (d *RedisDiscovery) WatchService() chan []*client.KVPair {
 	return ch
 }
 
-func (d *RedisDiscovery) RemoveWatcher(ch chan []*client.KVPair) {
+func (d *Discovery) RemoveWatcher(ch chan []*client.KVPair) {
 	d.mu.Lock()
 	defer d.mu.Unlock()
 
@@ -124,7 +124,7 @@ func (d *RedisDiscovery) RemoveWatcher(ch chan []*client.KVPair) {
 	d.chans = chans
 }
 
-func (d *RedisDiscovery) watch() {
+func (d *Discovery) watch() {
 	defer func() {
 		d.kv.Close()
 	}()
@@ -202,11 +202,11 @@ func (d *RedisDiscovery) watch() {
 	}
 }
 
-func (d *RedisDiscovery) Close() {
+func (d *Discovery) Close() {
 	close(d.stopCh)
 }
 
-func (d *RedisDiscovery) prefix(key string) (prefix string) {
+func (d *Discovery) prefix(key string) (prefix string) {
 	if strings.HasPrefix(key, "/") {
 		if strings.HasPrefix(d.basePath, "/") {
 			prefix = d.basePath + "/"
@@ -223,7 +223,7 @@ func (d *RedisDiscovery) prefix(key string) (prefix string) {
 	return
 }
 
-func (d *RedisDiscovery) setPairs(ps []*store.KVPair) []*client.KVPair {
+func (d *Discovery) setPairs(ps []*store.KVPair) []*client.KVPair {
 	pairs := make([]*client.KVPair, 0, len(ps))
 	var prefix string
 	for _, p := range ps {

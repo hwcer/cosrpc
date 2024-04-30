@@ -11,7 +11,7 @@ import (
 	"time"
 )
 
-var rpcxRegister *redis.RedisRegisterPlugin
+var rpcxRegister *redis.Register
 var rpcxDiscovery client.ServiceDiscovery
 
 func Discovery() (client.ServiceDiscovery, error) {
@@ -23,7 +23,7 @@ func Discovery() (client.ServiceDiscovery, error) {
 	if err != nil {
 		return nil, err
 	}
-	rpcxDiscovery, err = redis.NewRedisDiscovery(Options.BasePath, servicePath, address, options)
+	rpcxDiscovery, err = redis.NewDiscovery(Options.BasePath, servicePath, address, options)
 	if err != nil {
 		return nil, err
 	}
@@ -31,7 +31,7 @@ func Discovery() (client.ServiceDiscovery, error) {
 	return rpcxDiscovery, nil
 }
 
-func Register(urlRpcxAddr *utils.Address) (*redis.RedisRegisterPlugin, error) {
+func Register(urlRpcxAddr *utils.Address) (*redis.Register, error) {
 	if rpcxRegister != nil {
 		return rpcxRegister, nil
 	}
@@ -39,7 +39,7 @@ func Register(urlRpcxAddr *utils.Address) (*redis.RedisRegisterPlugin, error) {
 	if err != nil {
 		return nil, err
 	}
-	rpcxRegister = &redis.RedisRegisterPlugin{
+	rpcxRegister = &redis.Register{
 		ServiceAddress: fmt.Sprintf("%v%v:%v", AddressPrefix(), urlRpcxAddr.Host, urlRpcxAddr.Port),
 		RedisServers:   address,
 		BasePath:       Options.BasePath,

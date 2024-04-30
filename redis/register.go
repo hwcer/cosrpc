@@ -21,8 +21,8 @@ func init() {
 	redis.Register()
 }
 
-// RedisRegisterPlugin implements redis registry.
-type RedisRegisterPlugin struct {
+// Register implements redis registry.
+type Register struct {
 	// service address, for example, tcp@127.0.0.1:8972, quic@127.0.0.1:1234
 	ServiceAddress string
 	// redis addresses
@@ -44,7 +44,7 @@ type RedisRegisterPlugin struct {
 }
 
 // Start starts to connect redis cluster
-func (p *RedisRegisterPlugin) Start() error {
+func (p *Register) Start() error {
 	if p.done == nil {
 		p.done = make(chan struct{})
 	}
@@ -121,7 +121,7 @@ func (p *RedisRegisterPlugin) Start() error {
 }
 
 // Stop unregister all services.
-func (p *RedisRegisterPlugin) Stop() error {
+func (p *Register) Stop() error {
 	if p.kv == nil {
 		kv, err := libkv.NewStore(store.REDIS, p.RedisServers, p.Options)
 		if err != nil {
@@ -151,7 +151,7 @@ func (p *RedisRegisterPlugin) Stop() error {
 }
 
 // HandleConnAccept handles connections from clients
-func (p *RedisRegisterPlugin) HandleConnAccept(conn net.Conn) (net.Conn, bool) {
+func (p *Register) HandleConnAccept(conn net.Conn) (net.Conn, bool) {
 	if p.Metrics != nil {
 		metrics.GetOrRegisterMeter("connections", p.Metrics).Mark(1)
 	}
@@ -159,7 +159,7 @@ func (p *RedisRegisterPlugin) HandleConnAccept(conn net.Conn) (net.Conn, bool) {
 }
 
 // PreCall handles rpc call from clients
-func (p *RedisRegisterPlugin) PreCall(_ context.Context, _, _ string, args interface{}) (interface{}, error) {
+func (p *Register) PreCall(_ context.Context, _, _ string, args interface{}) (interface{}, error) {
 	if p.Metrics != nil {
 		metrics.GetOrRegisterMeter("calls", p.Metrics).Mark(1)
 	}
@@ -168,7 +168,7 @@ func (p *RedisRegisterPlugin) PreCall(_ context.Context, _, _ string, args inter
 
 // Register handles registering event.
 // this service is registered at BASE/serviceName/thisIpAddress node
-func (p *RedisRegisterPlugin) Register(name string, rcvr interface{}, metadata string) (err error) {
+func (p *Register) Register(name string, rcvr interface{}, metadata string) (err error) {
 	if strings.TrimSpace(name) == "" {
 		err = errors.New("Register service `name` can't be empty")
 		return
@@ -215,7 +215,7 @@ func (p *RedisRegisterPlugin) Register(name string, rcvr interface{}, metadata s
 	return
 }
 
-func (p *RedisRegisterPlugin) Unregister(name string) (err error) {
+func (p *Register) Unregister(name string) (err error) {
 	if len(p.Services) == 0 {
 		return nil
 	}
