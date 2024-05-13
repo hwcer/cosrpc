@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/hwcer/cosgo/binder"
 	"github.com/hwcer/cosgo/values"
 	"github.com/hwcer/cosrpc/xshare"
 	"github.com/hwcer/logger"
@@ -25,21 +24,21 @@ type Discovery func() (client.ServiceDiscovery, error)
 
 func New(ctx context.Context) *XClient {
 	return &XClient{
-		scc:       scc.New(ctx),
-		clients:   make(map[string]*Client),
-		Binder:    binder.New(binder.MIMEJSON),
+		scc:     scc.New(ctx),
+		clients: make(map[string]*Client),
+		//Binder:    binder.New(binder.MIMEJSON),
 		Registry:  registry.New(nil),
 		Discovery: xshare.Discovery,
 	}
 }
 
 type XClient struct {
-	scc       *scc.SCC
-	mutex     sync.Mutex
-	start     bool
-	clients   map[string]*Client
-	message   chan *protocol.Message
-	Binder    binder.Interface
+	scc     *scc.SCC
+	mutex   sync.Mutex
+	start   bool
+	clients map[string]*Client
+	message chan *protocol.Message
+	//Binder    binder.Interface
 	Registry  *registry.Registry
 	Discovery Discovery
 }
@@ -177,44 +176,32 @@ func (xc *XClient) XCall(ctx context.Context, servicePath, serviceMethod string,
 	if v, ok := args.([]byte); ok {
 		data = v
 	} else {
-		data, err = xc.Binder.Marshal(args)
+		data, err = xshare.Binder.Marshal(args)
 	}
 	if err != nil {
 		return err
 	}
 	if _, ok := reply.(*[]byte); ok {
 		if err = xc.Call(ctx, servicePath, serviceMethod, data, reply); err != nil {
-			//return ParseError(err)
 			return err
 		} else {
 			return nil
 		}
 	}
 	v := make([]byte, 0)
-	err = xc.Call(ctx, servicePath, serviceMethod, data, &v)
-
-	var msg *values.Message
-	var isReplyMsg bool
-	if reply == nil {
-		msg = &values.Message{}
-	} else if msg, isReplyMsg = reply.(*values.Message); !isReplyMsg {
-		msg = &values.Message{}
+	if err = xc.Call(ctx, servicePath, serviceMethod, data, &v); err != nil {
+		return err
 	}
-	if err == nil {
-		err = xc.Binder.Unmarshal(v, msg)
+	msg := &values.Message{}
+	if err = xshare.Binder.Unmarshal(v, msg); err != nil {
+		return err
 	}
-	if err != nil {
-		msg.Format(0, err)
-	}
-	if isReplyMsg {
-		return nil
+	if reply != nil {
+		err = msg.Unmarshal(reply)
 	} else if msg.Code != 0 {
-		return errors.New(msg.String())
-	} else if reply != nil {
-		return msg.Unmarshal(reply)
-	} else {
-		return nil
+		err = msg
 	}
+	return err
 }
 
 // Async 异步
@@ -232,7 +219,7 @@ func (xc *XClient) Async(ctx context.Context, servicePath, serviceMethod string,
 	if v, ok := args.([]byte); ok {
 		data = v
 	} else {
-		data, err = xc.Binder.Marshal(args)
+		data, err = xshare.Binder.Marshal(args)
 	}
 	if err != nil {
 		return nil, err
@@ -298,7 +285,7 @@ func (xc *XClient) handle(msg *protocol.Message) {
 		return
 	}
 
-	c := xshare.NewContext(&Context{Message: msg}, xc.Binder)
+	c := xshare.NewContext(&Context{Message: msg})
 	if _, err := handler.Caller(node, c); err != nil {
 		logger.Debug(err)
 	}

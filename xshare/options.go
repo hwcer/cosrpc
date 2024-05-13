@@ -2,6 +2,7 @@ package xshare
 
 import (
 	"fmt"
+	"github.com/hwcer/cosgo/binder"
 	"github.com/hwcer/cosgo/utils"
 	"strings"
 	"time"
@@ -12,6 +13,8 @@ const (
 	SelectorTypeProcess   = "process"   //进程内访问
 	SelectorTypeDiscovery = "discovery" //服务发现
 )
+
+var Binder = binder.New(binder.MIMEJSON)
 
 type Rpcx struct {
 	Redis    string //服务发现

@@ -2,7 +2,6 @@ package xserver
 
 import (
 	"errors"
-	"github.com/hwcer/cosgo/binder"
 	"github.com/hwcer/cosgo/utils"
 	"github.com/hwcer/cosrpc/redis"
 	"github.com/hwcer/cosrpc/xshare"
@@ -27,7 +26,7 @@ type rpcxServiceHandlerMetadata interface {
 func New() *XServer {
 	r := &XServer{}
 	r.Server = server.NewServer()
-	r.Binder = binder.New(binder.MIMEJSON)
+	//r.Binder = binder.New(binder.MIMEJSON)
 	r.Registry = registry.New(nil)
 	r.Server.DisableHTTPGateway = true
 	return r
@@ -35,8 +34,8 @@ func New() *XServer {
 
 type XServer struct {
 	*server.Server
-	start    int32
-	Binder   binder.Interface
+	start int32
+	//Binder   binder.Interface
 	Registry *registry.Registry
 	register *redis.Register
 }
@@ -59,7 +58,7 @@ func (xs *XServer) caller(sc *server.Context, node *registry.Node) (err error) {
 	if !ok {
 		return errors.New("handler unknown")
 	}
-	c := xshare.NewContext(sc, xs.Binder)
+	c := xshare.NewContext(sc)
 	var reply any
 	reply, err = handler.Caller(node, c)
 	if err != nil {

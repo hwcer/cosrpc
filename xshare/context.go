@@ -19,8 +19,8 @@ type ctx interface {
 	Write(reply any) error
 }
 
-func NewContext(ctx ctx, b binder.Interface) *Context {
-	return &Context{ctx: ctx, Binder: b}
+func NewContext(ctx ctx) *Context {
+	return &Context{ctx: ctx, Binder: Binder}
 }
 
 type Context struct {
