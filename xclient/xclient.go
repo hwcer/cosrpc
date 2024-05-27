@@ -272,7 +272,7 @@ func (xc *XClient) handle(msg *protocol.Message) {
 			logger.Alert("rpcx server recover error:%v\n%v", r, string(debug.Stack()))
 		}
 	}()
-	logger.Trace("XClient Message:%v", string(msg.Payload))
+	//logger.Trace("XClient Message:%v", string(msg.Payload))
 	node, ok := xc.Registry.Match(msg.ServicePath, msg.ServiceMethod)
 	if !ok {
 		logger.Debug("XClient handle not found,ServicePath:%v  ServiceMethod:%v", msg.ServicePath, msg.ServiceMethod)
