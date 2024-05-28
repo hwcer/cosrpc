@@ -255,14 +255,16 @@ func (xc *XClient) Service(name string, handler ...interface{}) *registry.Servic
 
 // 处理 server 端推送消息
 func (xc *XClient) worker(ctx context.Context) {
-	select {
-	case <-ctx.Done():
-		return
-	case msg := <-xc.message:
-		if msg == nil {
+	for {
+		select {
+		case <-ctx.Done():
 			return
-		} else {
-			xc.handle(msg)
+		case msg := <-xc.message:
+			if msg == nil {
+				return
+			} else {
+				xc.handle(msg)
+			}
 		}
 	}
 }
