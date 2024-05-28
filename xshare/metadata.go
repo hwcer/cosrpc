@@ -1,6 +1,7 @@
 package xshare
 
 import (
+	"fmt"
 	"github.com/hwcer/cosgo/binder"
 	"strconv"
 )
@@ -27,6 +28,10 @@ func NewMetadata(args ...string) Metadata {
 }
 
 type Metadata map[string]string
+
+func (this Metadata) Set(k string, v any) {
+	this[k] = fmt.Sprintf("%v", v)
+}
 
 func (this Metadata) SetAddress(v string) {
 	this[ServicesMetadataRpcServerAddress] = v
