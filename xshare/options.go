@@ -14,7 +14,7 @@ const (
 	SelectorTypeDiscovery = "discovery" //服务发现
 )
 
-var Binder = binder.New(binder.MIMEJSON)
+var Binder binder.Interface = binder.New(binder.MIMEJSON)
 
 type Rpcx struct {
 	Redis    string //服务发现
