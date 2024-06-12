@@ -5,8 +5,10 @@ import (
 	"github.com/hwcer/cosgo/binder"
 	"github.com/hwcer/cosgo/values"
 	"github.com/hwcer/logger"
+	"github.com/smallnest/rpcx/server"
 	"github.com/smallnest/rpcx/share"
 	"io"
+	"net"
 )
 
 type ctx interface {
@@ -54,6 +56,9 @@ func (this *Context) Bind(i interface{}) error {
 	}
 	return bind.Unmarshal(data, i)
 }
+func (this *Context) Conn() net.Conn {
+	return this.GetValue(server.RemoteConnContextKey).(net.Conn)
+}
 
 func (this *Context) Error(err any) *values.Message {
 	return values.Errorf(0, err)
@@ -91,6 +96,7 @@ func (this *Context) GetString(key string) (val string) {
 func (this *Context) GetValue(key any) any {
 	return this.ctx.Get(key)
 }
+
 func (this *Context) SetValue(key, val any) {
 	this.ctx.SetValue(key, val)
 }
