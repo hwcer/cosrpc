@@ -93,7 +93,7 @@ func (p *Register) Start() error {
 						nodePath := fmt.Sprintf("%s/%s/%s", p.BasePath, name, p.ServiceAddress)
 						kvPair, err := p.kv.Get(nodePath)
 						if err != nil {
-							log.Infof("can't get data of node: %s, because of %v", nodePath, err.Error())
+							log.Debug("can't get data of node: %s, because of %v", nodePath, err.Error())
 
 							p.metasLock.RLock()
 							meta := p.metas[name]
@@ -109,7 +109,7 @@ func (p *Register) Start() error {
 							for key, value := range extra {
 								v.Set(key, value)
 							}
-							p.kv.Put(nodePath, []byte(v.Encode()), &store.WriteOptions{TTL: p.UpdateInterval * 2})
+							_ = p.kv.Put(nodePath, []byte(v.Encode()), &store.WriteOptions{TTL: p.UpdateInterval * 2})
 						}
 					}
 				}
@@ -139,7 +139,7 @@ func (p *Register) Stop() error {
 			continue
 		}
 		if exist {
-			p.kv.Delete(nodePath)
+			_ = p.kv.Delete(nodePath)
 			log.Infof("delete path %s", nodePath, err)
 		}
 	}

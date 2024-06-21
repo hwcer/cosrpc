@@ -24,30 +24,51 @@ type Discovery func() (client.ServiceDiscovery, error)
 
 func New(ctx context.Context) *XClient {
 	return &XClient{
-		scc:     scc.New(ctx),
-		clients: make(map[string]*Client),
-		//Binder:    binder.New(binder.MIMEJSON),
+		scc:       scc.New(ctx),
+		clients:   &clients{},
 		Registry:  registry.New(nil),
 		Discovery: xshare.Discovery,
 	}
 }
 
+type clients struct {
+	dict map[string]*Client
+}
+
+func (c *clients) get(key string) *Client {
+	return c.dict[key]
+}
+func (c *clients) set(key string, client *Client) {
+	if c.dict == nil {
+		c.dict = make(map[string]*Client)
+	}
+	c.dict[key] = client
+}
+func (c *clients) has(key string) bool {
+	_, ok := c.dict[key]
+	return ok
+}
+
+func (c *clients) copy(cs *clients) {
+	for k, v := range cs.dict {
+		c.set(k, v)
+	}
+}
+
 type XClient struct {
-	scc     *scc.SCC
-	mutex   sync.Mutex
-	start   bool
-	clients map[string]*Client
-	message chan *protocol.Message
-	//Binder    binder.Interface
+	scc       *scc.SCC
+	mutex     sync.Mutex
+	started   bool
+	clients   *clients
+	message   chan *protocol.Message
 	Registry  *registry.Registry
 	Discovery Discovery
 }
 
 // addServicePath 观察服务器信息
 func (xc *XClient) addServicePath(servicePath string, selector any) (c *Client, err error) {
-	exist := xc.clients[servicePath]
-	if exist != nil && xshare.Equal(exist.Selector, selector) {
-		c = exist
+	if c = xc.clients.get(servicePath); c != nil {
+		err = c.Reload(selector)
 		return
 	}
 	c = &Client{}
@@ -56,20 +77,10 @@ func (xc *XClient) addServicePath(servicePath string, selector any) (c *Client, 
 	c.Selector = selector
 	c.ServicePath = servicePath
 	c.Option.SerializeType = protocol.SerializeNone
-	clients := map[string]*Client{}
-	for k, v := range xc.clients {
-		clients[k] = v
-	}
-	clients[servicePath] = c
-	xc.clients = clients
-	if !xc.start {
-		return
-	}
-	if exist != nil {
-		time.AfterFunc(5*time.Second, func() {
-			_ = exist.client.Close()
-		})
-	}
+	cs := &clients{}
+	cs.copy(xc.clients)
+	cs.set(servicePath, c)
+	xc.clients = cs
 	err = c.Start(xc.Discovery, xc.message)
 	return
 }
@@ -77,37 +88,15 @@ func (xc *XClient) addServicePath(servicePath string, selector any) (c *Client, 
 func (xc *XClient) Start() (err error) {
 	xc.mutex.Lock()
 	defer xc.mutex.Unlock()
-	if xc.start {
-		return
-	}
-	defer func() {
-		xc.start = true
-	}()
-
-	if err = xc.reload(); err != nil {
-		return
-	}
-
-	if xc.Registry.Len() > 0 {
-		xc.message = make(chan *protocol.Message, 1024)
-		for i := 0; i < 10; i++ {
-			xc.scc.CGO(xc.worker)
-		}
-	}
-	for _, c := range xc.clients {
-		if err = c.Start(xc.Discovery, xc.message); err != nil {
-			return
-		}
-	}
-	return
+	return xc.start()
 }
 
 func (xc *XClient) Close() (err error) {
 	if !xc.scc.Cancel() {
 		return
 	}
-	for _, c := range xc.clients {
-		if err = c.client.Close(); err != nil {
+	for _, c := range xc.clients.dict {
+		if err = c.Close(); err != nil {
 			return
 		}
 	}
@@ -117,27 +106,28 @@ func (xc *XClient) Close() (err error) {
 func (xc *XClient) Reload() (err error) {
 	xc.mutex.Lock()
 	defer xc.mutex.Unlock()
-	return xc.reload()
+	if !xc.started {
+		return xc.start()
+	} else {
+		return xc.reload()
+	}
 }
 
 func (xc *XClient) Has(servicePath string) bool {
-	if _, ok := xc.clients[servicePath]; ok {
-		return true
-	} else {
-		return false
-	}
+	return xc.clients.has(servicePath)
 }
 
 func (xc *XClient) Size() int {
-	return len(xc.clients)
+	return len(xc.clients.dict)
 }
 
 func (xc *XClient) Client(servicePath string) client.XClient {
-	if v, ok := xc.clients[servicePath]; ok {
-		return v.client
+	if r := xc.clients.get(servicePath); r != nil {
+		return r.client
 	} else {
 		return nil
 	}
+
 }
 
 func (xc *XClient) Call(ctx context.Context, servicePath, serviceMethod string, args, reply any) (err error) {
@@ -291,6 +281,24 @@ func (xc *XClient) handle(msg *protocol.Message) {
 	if _, err := handler.Caller(node, c); err != nil {
 		logger.Debug(err)
 	}
+}
+
+func (xc *XClient) start() (err error) {
+	if xc.started {
+		return
+	}
+	xc.started = true
+
+	if xc.Registry.Len() > 0 {
+		xc.message = make(chan *protocol.Message, xshare.Options.ClientMessageChan)
+		for i := 0; i < xshare.Options.ClientMessageWorker; i++ {
+			xc.scc.CGO(xc.worker)
+		}
+	}
+	if err = xc.reload(); err != nil {
+		return
+	}
+	return
 }
 
 func (xc *XClient) reload() (err error) {

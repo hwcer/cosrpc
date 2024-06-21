@@ -26,7 +26,6 @@ type rpcxServiceHandlerMetadata interface {
 func New() *XServer {
 	r := &XServer{}
 	r.Server = server.NewServer()
-	//r.Binder = binder.New(binder.MIMEJSON)
 	r.Registry = registry.New(nil)
 	r.Server.DisableHTTPGateway = true
 	return r
@@ -34,8 +33,7 @@ func New() *XServer {
 
 type XServer struct {
 	*server.Server
-	start int32
-	//Binder   binder.Interface
+	started  int32
 	Registry *registry.Registry
 	register *redis.Register
 }
@@ -92,7 +90,7 @@ func (xs *XServer) Start() (err error) {
 	if xs.Registry.Len() == 0 {
 		return
 	}
-	if !atomic.CompareAndSwapInt32(&xs.start, 0, 1) {
+	if !atomic.CompareAndSwapInt32(&xs.started, 0, 1) {
 		return
 	}
 
