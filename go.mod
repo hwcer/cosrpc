@@ -15,7 +15,6 @@ require (
 )
 
 require (
-	github.com/StackExchange/wmi v1.2.1 // indirect
 	github.com/akutz/memconn v0.1.0 // indirect
 	github.com/alitto/pond v1.8.3 // indirect
 	github.com/apache/thrift v0.20.0 // indirect
@@ -32,7 +31,6 @@ require (
 	github.com/go-ole/go-ole v1.3.0 // indirect
 	github.com/go-ping/ping v1.1.0 // indirect
 	github.com/go-redis/redis/v8 v8.11.5 // indirect
-	github.com/go-task/slim-sprig v0.0.0-20230315185526-52ccab3ef572 // indirect
 	github.com/go-task/slim-sprig/v3 v3.0.0 // indirect
 	github.com/godzie44/go-uring v0.0.0-20220926161041-69611e8b13d5 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
@@ -45,7 +43,6 @@ require (
 	github.com/hashicorp/golang-lru v1.0.2 // indirect
 	github.com/hwcer/schema v0.0.3 // indirect
 	github.com/jamiealquiza/tachymeter v2.0.0+incompatible // indirect
-	github.com/json-iterator/go v1.1.12 // indirect
 	github.com/juju/ratelimit v1.0.2 // indirect
 	github.com/julienschmidt/httprouter v1.3.0 // indirect
 	github.com/kavu/go_reuseport v1.5.0 // indirect
@@ -58,8 +55,6 @@ require (
 	github.com/mattn/go-colorable v0.1.13 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/miekg/dns v1.1.59 // indirect
-	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
-	github.com/modern-go/reflect2 v1.0.2 // indirect
 	github.com/montanaflynn/stats v0.7.1 // indirect
 	github.com/onsi/ginkgo/v2 v2.17.2 // indirect
 	github.com/philhofer/fwd v1.1.2 // indirect
@@ -74,7 +69,6 @@ require (
 	github.com/smallnest/quick v0.1.0 // indirect
 	github.com/smallnest/statsview v1.0.1 // indirect
 	github.com/soheilhy/cmux v0.1.5 // indirect
-	github.com/stretchr/testify v1.9.0 // indirect
 	github.com/templexxx/cpufeat v0.0.0-20180724012125-cef66df7f161 // indirect
 	github.com/templexxx/xor v0.0.0-20191217153810-f85b25db303b // indirect
 	github.com/tinylib/msgp v1.1.9 // indirect
