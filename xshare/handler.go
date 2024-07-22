@@ -110,7 +110,7 @@ func (this *Handler) Marshal(c *Context, reply interface{}) (data []byte, err er
 	case *[]byte:
 		data = *v
 	default:
-		data, err = c.Binder.Marshal(values.Parse(reply))
+		data, err = Binder.Marshal(values.Parse(reply))
 	}
 	return
 }

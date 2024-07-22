@@ -22,13 +22,24 @@ type ctx interface {
 }
 
 func NewContext(ctx ctx) *Context {
-	return &Context{ctx: ctx, Binder: Binder}
+	return &Context{ctx: ctx}
 }
 
 type Context struct {
-	ctx    ctx
-	body   values.Values
-	Binder binder.Interface
+	ctx  ctx
+	body values.Values
+	//Binder binder.Interface
+}
+
+func (this *Context) Binder() binder.Interface {
+	var bind binder.Interface
+	if t := this.GetMetadata(binder.ContentType); t != "" {
+		bind = binder.New(t)
+	}
+	if bind == nil {
+		bind = Binder
+	}
+	return bind
 }
 
 // Reader 返回一个io.Reader来读取包体
@@ -47,13 +58,7 @@ func (this *Context) Bind(i interface{}) error {
 	if len(data) == 0 {
 		return nil
 	}
-	var bind binder.Interface
-	if t := this.GetMetadata(binder.ContentType); t != "" {
-		bind = binder.New(t)
-	}
-	if bind == nil {
-		bind = this.Binder
-	}
+	bind := this.Binder()
 	return bind.Unmarshal(data, i)
 }
 func (this *Context) Conn() net.Conn {
