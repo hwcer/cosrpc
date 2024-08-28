@@ -26,12 +26,18 @@ func NewContext(ctx ctx) *Context {
 }
 
 type Context struct {
-	ctx  ctx
-	body values.Values
-	//Binder binder.Interface
+	ctx    ctx
+	body   values.Values
+	binder binder.Interface
 }
 
-func (this *Context) Binder() binder.Interface {
+func (this *Context) Binder(b ...binder.Interface) binder.Interface {
+	if len(b) > 0 {
+		this.binder = b[0]
+	}
+	if this.binder != nil {
+		return this.binder
+	}
 	var bind binder.Interface
 	if t := this.GetMetadata(binder.ContentType); t != "" {
 		bind = binder.New(t)
