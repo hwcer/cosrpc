@@ -78,6 +78,12 @@ func LocalIpv4() (ip string, err error) {
 	if ipv4, err = utils.LocalIPv4s(); err != nil {
 		return
 	}
+	for _, s := range ipv4 {
+		i := strings.Index(s, ".")
+		if k := s[:i]; k == "192" || k == "10" || k == "172" {
+			return s, nil
+		}
+	}
 	if len(ipv4) == 0 {
 		err = fmt.Errorf("无法获取服务器的内网IP")
 	} else {
