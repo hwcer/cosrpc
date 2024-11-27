@@ -1,6 +1,6 @@
 package xserver
 
-import "github.com/hwcer/registry"
+import "github.com/hwcer/cosgo/registry"
 
 var Default = New()
 
