@@ -2,6 +2,7 @@ package xclient
 
 import (
 	"context"
+	"github.com/hwcer/cosgo/options"
 	"github.com/hwcer/cosrpc/xshare"
 	"github.com/hwcer/registry"
 	"github.com/smallnest/rpcx/client"
@@ -34,20 +35,20 @@ func Async(ctx context.Context, servicePath, serviceMethod string, args any) (ca
 
 // CallWithServerId 通过特定服务器ID发消息
 func CallWithServerId(ctx context.Context, sid int32, servicePath, serviceMethod string, args, reply any) (err error) {
-	metadata := make(xshare.Metadata)
+	metadata := make(options.Metadata)
 	metadata.SetServerId(sid)
 	return Default.CallWithMetadata(metadata.Json(), nil, servicePath, registry.Join(serviceMethod), args, reply)
 }
 
 // CallWithAddress 通过服务器地址发消息
 func CallWithAddress(address string, servicePath, serviceMethod string, args, reply any) (err error) {
-	metadata := make(xshare.Metadata)
+	metadata := make(options.Metadata)
 	metadata.SetAddress(address)
 	return Default.CallWithMetadata(metadata.Json(), nil, servicePath, registry.Join(serviceMethod), args, reply)
 }
 
 // CallWithMetadata 自定义metadata
-func CallWithMetadata(req, res xshare.Metadata, servicePath, serviceMethod string, args, reply any) (err error) {
+func CallWithMetadata(req, res options.Metadata, servicePath, serviceMethod string, args, reply any) (err error) {
 	return Default.CallWithMetadata(req, res, servicePath, registry.Join(serviceMethod), args, reply)
 }
 

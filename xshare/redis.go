@@ -2,6 +2,7 @@ package xshare
 
 import (
 	"fmt"
+	"github.com/hwcer/cosgo/options"
 	"github.com/hwcer/cosgo/utils"
 	"github.com/hwcer/cosrpc/redis"
 	"github.com/rpcxio/libkv/store"
@@ -19,11 +20,11 @@ func Discovery() (client.ServiceDiscovery, error) {
 	if rpcxDiscovery != nil {
 		return rpcxDiscovery, nil
 	}
-	address, options, err := getRedisAddress()
+	address, opt, err := getRedisAddress()
 	if err != nil {
 		return nil, err
 	}
-	rpcxDiscovery, err = redis.NewDiscovery(Options.BasePath, servicePath, address, options)
+	rpcxDiscovery, err = redis.NewDiscovery(options.Options.Appid, servicePath, address, opt)
 	if err != nil {
 		return nil, err
 	}
@@ -35,15 +36,15 @@ func Register(urlRpcxAddr *utils.Address) (*redis.Register, error) {
 	if rpcxRegister != nil {
 		return rpcxRegister, nil
 	}
-	address, options, err := getRedisAddress()
+	address, opt, err := getRedisAddress()
 	if err != nil {
 		return nil, err
 	}
 	rpcxRegister = &redis.Register{
 		ServiceAddress: fmt.Sprintf("%v%v:%v", AddressPrefix(), urlRpcxAddr.Host, urlRpcxAddr.Port),
 		RedisServers:   address,
-		BasePath:       Options.BasePath,
-		Options:        options,
+		BasePath:       options.Options.Appid,
+		Options:        opt,
 		UpdateInterval: time.Second * 10,
 	}
 	return rpcxRegister, nil
@@ -55,7 +56,7 @@ func serviceDiscoveryFilter(kv *client.KVPair) bool {
 
 func getRedisAddress() (address []string, opts *store.Config, err error) {
 	var uri *url.URL
-	uri, err = utils.NewUrl(Options.Redis, "tcp")
+	uri, err = utils.NewUrl(options.Rpcx.Redis, "tcp")
 	if err != nil {
 		return
 	}

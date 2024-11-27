@@ -3,6 +3,7 @@ package xshare
 import (
 	"context"
 	"fmt"
+	"github.com/hwcer/cosgo/options"
 	"github.com/smallnest/rpcx/share"
 	"net/url"
 	"strconv"
@@ -33,10 +34,10 @@ func (this *Selector) Select(ctx context.Context, servicePath, serviceMethod str
 	metadata, _ := ctx.Value(share.ReqMetaDataKey).(map[string]string)
 	serverId := ServicesServerIdAll
 	if metadata != nil {
-		if address, ok := metadata[ServicesMetadataRpcServerAddress]; ok {
+		if address, ok := metadata[options.ServicesMetadataSelectorServerAddress]; ok {
 			return AddressFormat(address)
 		}
-		if v, ok := metadata[ServicesMetadataRpcServerId]; ok {
+		if v, ok := metadata[options.ServicesMetadataSelectorServerId]; ok {
 			serverId = v
 		}
 	}
@@ -61,7 +62,7 @@ func (this *Selector) Select(ctx context.Context, servicePath, serviceMethod str
 func (this *Selector) UpdateServer(servers map[string]string) {
 	ss := make(map[string][]*node)
 	//logger.Debug("===================UpdateServer:%v============================", this.servicePath)
-	prefix := fmt.Sprintf("%v/%v/", Options.BasePath, this.servicePath)
+	prefix := fmt.Sprintf("%v/%v/", options.Options.Appid, this.servicePath)
 	for address, value := range servers {
 		if !strings.HasPrefix(address, prefix) {
 			continue
@@ -70,8 +71,8 @@ func (this *Selector) UpdateServer(servers map[string]string) {
 		s := &node{}
 		s.Address = strings.TrimPrefix(address, prefix)
 		if query, err := url.ParseQuery(value); err == nil {
-			s.Average, _ = strconv.Atoi(query.Get(ServicesMetadataAverage))
-			s.ServerId = strings.Split(query.Get(ServicesMetadataRpcServerId), ",")
+			s.Average, _ = strconv.Atoi(query.Get(options.ServicesMetadataSelectorAverage))
+			s.ServerId = strings.Split(query.Get(options.ServicesMetadataSelectorServerId), ",")
 		}
 		for _, k := range s.ServerId {
 			ss[k] = append(ss[k], s)

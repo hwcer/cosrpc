@@ -2,6 +2,7 @@ package xserver
 
 import (
 	"errors"
+	"github.com/hwcer/cosgo/options"
 	"github.com/hwcer/cosgo/utils"
 	"github.com/hwcer/cosrpc/redis"
 	"github.com/hwcer/cosrpc/xshare"
@@ -128,7 +129,7 @@ func (xs *XServer) startServe(network, address string) (err error) {
 }
 
 func (xs *XServer) startRegister(address *utils.Address) (err error) {
-	if xshare.Options.Redis == "" {
+	if options.Rpcx.Redis == "" {
 		return
 	}
 	//注册服务,实现 rpcxServiceHandlerMetadata 才具有服务发现功能
@@ -165,13 +166,13 @@ func (xs *XServer) Close() (err error) {
 }
 
 func (xs *XServer) Address() *utils.Address {
-	address := utils.NewAddress(xshare.Options.Address)
+	address := utils.NewAddress(options.Rpcx.Address)
 	if address.Retry == 0 {
 		address.Retry = 100
 	}
 	if address.Host == "" {
 		address.Host, _ = xshare.LocalIpv4()
 	}
-	address.Scheme = xshare.Options.Network
+	address.Scheme = options.Rpcx.Network
 	return address
 }

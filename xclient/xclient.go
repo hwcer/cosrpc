@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/hwcer/cosgo/options"
 	"github.com/hwcer/cosgo/values"
 	"github.com/hwcer/cosrpc/xshare"
 	"github.com/hwcer/logger"
@@ -290,8 +291,8 @@ func (xc *XClient) start() (err error) {
 	xc.started = true
 
 	if xc.Registry.Len() > 0 {
-		xc.message = make(chan *protocol.Message, xshare.Options.ClientMessageChan)
-		for i := 0; i < xshare.Options.ClientMessageWorker; i++ {
+		xc.message = make(chan *protocol.Message, options.Rpcx.ClientMessageChan)
+		for i := 0; i < options.Rpcx.ClientMessageWorker; i++ {
 			xc.scc.CGO(xc.worker)
 		}
 	}
@@ -302,7 +303,7 @@ func (xc *XClient) start() (err error) {
 }
 
 func (xc *XClient) reload() (err error) {
-	for name, value := range xshare.Service {
+	for name, value := range options.Service {
 		if selector := xc.selector(name, value); selector == nil {
 			return values.Errorf(0, "Service config error:%v %v", name, value)
 		} else if _, err = xc.addServicePath(name, selector); err != nil {
@@ -313,9 +314,9 @@ func (xc *XClient) reload() (err error) {
 }
 
 func (xc *XClient) selector(k, v string) (r any) {
-	if s := strings.ToLower(v); s == xshare.SelectorTypeDiscovery {
+	if s := strings.ToLower(v); s == options.SelectorTypeDiscovery {
 		return xshare.NewSelector(k)
-	} else if s == xshare.SelectorTypeLocal {
+	} else if s == options.SelectorTypeLocal {
 		return xshare.Address().String()
 	} else if strings.Contains(v, ",") {
 		r = strings.Split(v, ",")
