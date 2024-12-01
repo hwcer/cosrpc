@@ -218,7 +218,7 @@ func (xc *XClient) Async(ctx context.Context, servicePath, serviceMethod string,
 	return c.Go(ctx, serviceMethod, data, nil, nil)
 }
 
-func (xc *XClient) CallWithMetadata(req, res xshare.Metadata, servicePath, serviceMethod string, args, reply any) (err error) {
+func (xc *XClient) CallWithMetadata(req, res options.Metadata, servicePath, serviceMethod string, args, reply any) (err error) {
 	ctx, cancel := xc.scc.WithTimeout(xshare.Timeout())
 	defer cancel()
 	if req != nil {

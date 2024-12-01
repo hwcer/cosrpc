@@ -156,6 +156,9 @@ func (xs *XServer) startRegister(address *utils.Address) (err error) {
 }
 
 func (xs *XServer) Close() (err error) {
+	if !atomic.CompareAndSwapInt32(&xs.started, 1, 0) {
+		return
+	}
 	if err = xs.Server.Shutdown(nil); err != nil {
 		return
 	}

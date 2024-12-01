@@ -4,6 +4,9 @@ go 1.22.0
 
 toolchain go1.23.2
 
+replace (
+	github.com/hwcer/cosgo v1.1.0 => ../cosgo
+)
 require (
 	github.com/hwcer/cosgo v1.1.0
 	github.com/rcrowley/go-metrics v0.0.0-20201227073835-cf1acfcdf475
