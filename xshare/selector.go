@@ -34,10 +34,10 @@ func (this *Selector) Select(ctx context.Context, servicePath, serviceMethod str
 	metadata, _ := ctx.Value(share.ReqMetaDataKey).(map[string]string)
 	serverId := ServicesServerIdAll
 	if metadata != nil {
-		if address, ok := metadata[options.ServicesSelectorServerAddress]; ok {
+		if address, ok := metadata[options.ServiceSelectorServerAddress]; ok {
 			return AddressFormat(address)
 		}
-		if v, ok := metadata[options.ServicesSelectorServerId]; ok {
+		if v, ok := metadata[options.ServiceSelectorServerId]; ok {
 			serverId = v
 		}
 	}
@@ -71,8 +71,8 @@ func (this *Selector) UpdateServer(servers map[string]string) {
 		s := &node{}
 		s.Address = strings.TrimPrefix(address, prefix)
 		if query, err := url.ParseQuery(value); err == nil {
-			s.Average, _ = strconv.Atoi(query.Get(options.ServicesSelectorAverage))
-			s.ServerId = strings.Split(query.Get(options.ServicesSelectorServerId), ",")
+			s.Average, _ = strconv.Atoi(query.Get(options.ServiceSelectorAverage))
+			s.ServerId = strings.Split(query.Get(options.ServiceSelectorServerId), ",")
 		}
 		for _, k := range s.ServerId {
 			ss[k] = append(ss[k], s)
