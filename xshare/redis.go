@@ -2,9 +2,9 @@ package xshare
 
 import (
 	"fmt"
-	"github.com/hwcer/cosgo/options"
 	"github.com/hwcer/cosgo/utils"
 	"github.com/hwcer/cosrpc/redis"
+	"github.com/hwcer/wower/options"
 	"github.com/rpcxio/libkv/store"
 	"github.com/smallnest/rpcx/client"
 	"net/url"

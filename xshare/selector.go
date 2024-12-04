@@ -3,7 +3,7 @@ package xshare
 import (
 	"context"
 	"fmt"
-	"github.com/hwcer/cosgo/options"
+	"github.com/hwcer/wower/options"
 	"github.com/smallnest/rpcx/share"
 	"net/url"
 	"strconv"

@@ -3,8 +3,8 @@ package xshare
 import (
 	"fmt"
 	"github.com/hwcer/cosgo/binder"
-	"github.com/hwcer/cosgo/options"
 	"github.com/hwcer/cosgo/utils"
+	"github.com/hwcer/wower/options"
 	"strings"
 	"time"
 )
