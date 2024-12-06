@@ -8,7 +8,6 @@ import (
 	"github.com/hwcer/cosgo/utils"
 	"github.com/hwcer/cosrpc/redis"
 	"github.com/hwcer/cosrpc/xshare"
-	"github.com/hwcer/wower/options"
 	"github.com/smallnest/rpcx/server"
 	"runtime/debug"
 	"sync/atomic"
@@ -42,12 +41,12 @@ type XServer struct {
 // rpcxHandle 闭包绑定 route和Node
 func (xs *XServer) handle(node *registry.Node) func(*server.Context) error {
 	return func(sc *server.Context) error {
-		return xs.caller(sc, node)
+		return xs.Caller(sc, node)
 	}
 }
 
-// caller services入口
-func (xs *XServer) caller(sc *server.Context, node *registry.Node) (err error) {
+// Caller services入口
+func (xs *XServer) Caller(sc xshare.XContext, node *registry.Node) (err error) {
 	defer func() {
 		if r := recover(); r != nil {
 			logger.Alert("rpcx server recover error:%v\n%v", r, string(debug.Stack()))
@@ -129,7 +128,7 @@ func (xs *XServer) startServe(network, address string) (err error) {
 }
 
 func (xs *XServer) startRegister(address *utils.Address) (err error) {
-	if options.Rpcx.Redis == "" {
+	if xshare.Options.Redis == "" {
 		return
 	}
 	//注册服务,实现 rpcxServiceHandlerMetadata 才具有服务发现功能
@@ -169,13 +168,13 @@ func (xs *XServer) Close() (err error) {
 }
 
 func (xs *XServer) Address() *utils.Address {
-	address := utils.NewAddress(options.Rpcx.Address)
+	address := utils.NewAddress(xshare.Options.Address)
 	if address.Retry == 0 {
 		address.Retry = 100
 	}
 	if address.Host == "" {
 		address.Host, _ = xshare.LocalIpv4()
 	}
-	address.Scheme = options.Rpcx.Network
+	address.Scheme = xshare.Options.Network
 	return address
 }

@@ -11,7 +11,7 @@ import (
 	"net"
 )
 
-type ctx interface {
+type XContext interface {
 	Get(key any) any
 	SetValue(key, val any)
 	Payload() []byte
@@ -21,12 +21,12 @@ type ctx interface {
 	Write(reply any) error
 }
 
-func NewContext(ctx ctx) *Context {
+func NewContext(ctx XContext) *Context {
 	return &Context{ctx: ctx}
 }
 
 type Context struct {
-	ctx    ctx
+	ctx    XContext
 	body   values.Values
 	binder binder.Interface
 }

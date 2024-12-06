@@ -3,6 +3,7 @@ package xclient
 import (
 	"errors"
 	"fmt"
+	"github.com/hwcer/cosrpc/inprocess"
 	"github.com/hwcer/cosrpc/xshare"
 	"github.com/smallnest/rpcx/client"
 	"github.com/smallnest/rpcx/log"
@@ -28,7 +29,11 @@ func (this *Client) Start(discovery Discovery, ch chan *protocol.Message) (err e
 	this.ch = ch
 	switch v := this.Selector.(type) {
 	case string:
-		err = this.Multiple([]string{v})
+		if v == xshare.SelectorTypeProcess {
+			this.client = inprocess.NewClient(this.ServicePath)
+		} else {
+			err = this.Multiple([]string{v})
+		}
 	case []string:
 		err = this.Multiple(v)
 	case client.Selector:

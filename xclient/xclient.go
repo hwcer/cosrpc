@@ -218,7 +218,7 @@ func (xc *XClient) Async(ctx context.Context, servicePath, serviceMethod string,
 	return c.Go(ctx, serviceMethod, data, nil, nil)
 }
 
-func (xc *XClient) CallWithMetadata(req, res options.Metadata, servicePath, serviceMethod string, args, reply any) (err error) {
+func (xc *XClient) CallWithMetadata(req, res xshare.Metadata, servicePath, serviceMethod string, args, reply any) (err error) {
 	ctx, cancel := xc.scc.WithTimeout(xshare.Timeout())
 	defer cancel()
 	if req != nil {
@@ -291,8 +291,8 @@ func (xc *XClient) start() (err error) {
 	xc.started = true
 
 	if xc.Registry.Len() > 0 {
-		xc.message = make(chan *protocol.Message, options.Rpcx.ClientMessageChan)
-		for i := 0; i < options.Rpcx.ClientMessageWorker; i++ {
+		xc.message = make(chan *protocol.Message, xshare.Options.ClientMessageChan)
+		for i := 0; i < xshare.Options.ClientMessageWorker; i++ {
 			xc.scc.CGO(xc.worker)
 		}
 	}
@@ -314,9 +314,9 @@ func (xc *XClient) reload() (err error) {
 }
 
 func (xc *XClient) selector(k, v string) (r any) {
-	if s := strings.ToLower(v); s == options.SelectorTypeDiscovery {
+	if s := strings.ToLower(v); s == xshare.SelectorTypeDiscovery {
 		return xshare.NewSelector(k)
-	} else if s == options.SelectorTypeLocal {
+	} else if s == xshare.SelectorTypeLocal {
 		return xshare.Address().String()
 	} else if strings.Contains(v, ",") {
 		r = strings.Split(v, ",")

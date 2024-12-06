@@ -3,7 +3,6 @@ package xshare
 import (
 	"context"
 	"fmt"
-	"github.com/hwcer/wower/options"
 	"github.com/smallnest/rpcx/share"
 	"net/url"
 	"strconv"
@@ -12,6 +11,12 @@ import (
 
 const (
 	ServicesServerIdAll = "-"
+)
+const (
+	ServiceSelectorAverage       = "_rpc_srv_avg"
+	ServiceSelectorServerId      = "_rpc_srv_sid"  //服务器编号
+	ServiceSelectorServerAddress = "_rpc_srv_addr" //rpc服务器ID,selector 中固定转发地址
+
 )
 
 func NewSelector(servicePath string) *Selector {
@@ -34,10 +39,10 @@ func (this *Selector) Select(ctx context.Context, servicePath, serviceMethod str
 	metadata, _ := ctx.Value(share.ReqMetaDataKey).(map[string]string)
 	serverId := ServicesServerIdAll
 	if metadata != nil {
-		if address, ok := metadata[options.ServiceSelectorServerAddress]; ok {
+		if address, ok := metadata[ServiceSelectorServerAddress]; ok {
 			return AddressFormat(address)
 		}
-		if v, ok := metadata[options.ServiceSelectorServerId]; ok {
+		if v, ok := metadata[ServiceSelectorServerId]; ok {
 			serverId = v
 		}
 	}
@@ -62,7 +67,7 @@ func (this *Selector) Select(ctx context.Context, servicePath, serviceMethod str
 func (this *Selector) UpdateServer(servers map[string]string) {
 	ss := make(map[string][]*node)
 	//logger.Debug("===================UpdateServer:%v============================", this.servicePath)
-	prefix := fmt.Sprintf("%v/%v/", options.Options.Appid, this.servicePath)
+	prefix := fmt.Sprintf("%v/%v/", Options.BasePath, this.servicePath)
 	for address, value := range servers {
 		if !strings.HasPrefix(address, prefix) {
 			continue
@@ -71,8 +76,8 @@ func (this *Selector) UpdateServer(servers map[string]string) {
 		s := &node{}
 		s.Address = strings.TrimPrefix(address, prefix)
 		if query, err := url.ParseQuery(value); err == nil {
-			s.Average, _ = strconv.Atoi(query.Get(options.ServiceSelectorAverage))
-			s.ServerId = strings.Split(query.Get(options.ServiceSelectorServerId), ",")
+			s.Average, _ = strconv.Atoi(query.Get(ServiceSelectorAverage))
+			s.ServerId = strings.Split(query.Get(ServiceSelectorServerId), ",")
 		}
 		for _, k := range s.ServerId {
 			ss[k] = append(ss[k], s)
