@@ -69,20 +69,10 @@ func (this *Handler) Metadata() string {
 	return strings.Join(arr, "&")
 }
 
-//func (this *Handler) bytes(i any, bind binder.Interface) []byte {
-//	v := values.NewMessage(i)
-//	r, err := bind.Marshal(this)
-//	if err != nil {
-//		v.Format(0, err)
-//		r, _ = bind.Marshal(this)
-//	}
-//	return r
-//}
-
 func (this *Handler) Caller(node *registry.Node, c *Context) (reply interface{}, err error) {
 	defer func() {
 		if e := recover(); e != nil {
-			reply = values.Errorf(500, "server recover error")
+			err = values.Errorf(500, "server recover error")
 			logger.Error(e)
 		}
 	}()
@@ -110,7 +100,7 @@ func (this *Handler) Marshal(c *Context, reply interface{}) (data []byte, err er
 	case *[]byte:
 		data = *v
 	default:
-		data, err = Binder.Marshal(values.Parse(reply))
+		data, err = c.Binder().Marshal(values.Parse(reply))
 	}
 	return
 }

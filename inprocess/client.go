@@ -48,10 +48,12 @@ func (c *Client) Call(ctx context.Context, serviceMethod string, args interface{
 	req := &Request{}
 	req.ServicePath = c.servicePath
 	req.ServiceMethod = serviceMethod
-	if req.Payload, err = xshare.Marshal(args); err != nil {
+	sc := &Context{req: req, meta: map[any]any{}}
+	bind := xshare.Binder(sc)
+	if req.Payload, err = bind.Marshal(args); err != nil {
 		return err
 	}
-	sc := &Context{req: req, meta: map[any]any{}}
+
 	sc.reply = bytes.Buffer{}
 	if v := ctx.Value(share.ReqMetaDataKey); v != nil {
 		sc.meta[share.ReqMetaDataKey] = v
@@ -77,7 +79,7 @@ func (c *Client) Call(ctx context.Context, serviceMethod string, args interface{
 	case *string:
 		*r = sc.reply.String()
 	default:
-		err = xshare.Binder.Unmarshal(sc.reply.Bytes(), reply)
+		err = bind.Unmarshal(sc.reply.Bytes(), reply)
 	}
 	return err
 }

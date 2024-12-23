@@ -2,13 +2,10 @@ package xshare
 
 import (
 	"fmt"
-	"github.com/hwcer/cosgo/binder"
 	"github.com/hwcer/cosgo/utils"
 	"strings"
 	"time"
 )
-
-var Binder binder.Interface = binder.Json
 
 var rpcServerAddress *utils.Address
 
@@ -35,15 +32,6 @@ type Rpcx = struct {
 	BasePath            string
 	ClientMessageChan   int //双向通信客户端接受消息通道大小
 	ClientMessageWorker int //双向通信客户端处理消息协程数量
-}
-
-func Marshal(i any) ([]byte, error) {
-	switch v := i.(type) {
-	case []byte:
-		return v, nil
-	default:
-		return Binder.Marshal(i)
-	}
 }
 
 func Address() *utils.Address {

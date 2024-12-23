@@ -167,7 +167,7 @@ func (xc *XClient) XCall(ctx context.Context, servicePath, serviceMethod string,
 	if v, ok := args.([]byte); ok {
 		data = v
 	} else {
-		data, err = xshare.Binder.Marshal(args)
+		data, err = xshare.Binder(nil).Marshal(args)
 	}
 	if err != nil {
 		return err
@@ -184,7 +184,7 @@ func (xc *XClient) XCall(ctx context.Context, servicePath, serviceMethod string,
 		return err
 	}
 	msg := &values.Message{}
-	if err = xshare.Binder.Unmarshal(v, msg); err != nil {
+	if err = xshare.Binder(nil).Unmarshal(v, msg); err != nil {
 		return err
 	}
 	if reply != nil {
@@ -210,7 +210,7 @@ func (xc *XClient) Async(ctx context.Context, servicePath, serviceMethod string,
 	if v, ok := args.([]byte); ok {
 		data = v
 	} else {
-		data, err = xshare.Binder.Marshal(args)
+		data, err = xshare.Binder(nil).Marshal(args)
 	}
 	if err != nil {
 		return nil, err

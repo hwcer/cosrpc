@@ -26,26 +26,12 @@ func NewContext(ctx XContext) *Context {
 }
 
 type Context struct {
-	ctx    XContext
-	body   values.Values
-	binder binder.Interface
+	ctx  XContext
+	body values.Values
 }
 
 func (this *Context) Binder(b ...binder.Interface) binder.Interface {
-	if len(b) > 0 {
-		this.binder = b[0]
-	}
-	if this.binder != nil {
-		return this.binder
-	}
-	var bind binder.Interface
-	if t := this.GetMetadata(binder.ContentType); t != "" {
-		bind = binder.New(t)
-	}
-	if bind == nil {
-		bind = Binder
-	}
-	return bind
+	return Binder(this, b...)
 }
 
 // Reader 返回一个io.Reader来读取包体
@@ -59,12 +45,12 @@ func (this *Context) Bytes() []byte {
 func (this *Context) Write(data []byte) error {
 	return this.ctx.Write(data)
 }
-func (this *Context) Bind(i interface{}) error {
+func (this *Context) Bind(i interface{}, bs ...binder.Interface) error {
 	data := this.ctx.Payload()
 	if len(data) == 0 {
 		return nil
 	}
-	bind := this.Binder()
+	bind := this.Binder(bs...)
 	return bind.Unmarshal(data, i)
 }
 func (this *Context) Conn() net.Conn {

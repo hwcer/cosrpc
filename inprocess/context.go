@@ -48,6 +48,11 @@ func (ctx *Context) Metadata() map[string]string {
 	return map[string]string{}
 }
 
+func (ctx *Context) GetMetadata(name string) string {
+	meta := ctx.Metadata()
+	return meta[name]
+}
+
 // ServicePath returns the ServicePath.
 func (ctx *Context) ServicePath() string {
 	return ctx.req.ServicePath
