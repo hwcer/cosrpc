@@ -9,7 +9,6 @@ import (
 	"github.com/hwcer/cosgo/scc"
 	"github.com/hwcer/cosgo/values"
 	"github.com/hwcer/cosrpc/xshare"
-	"github.com/hwcer/wower/options"
 	"github.com/smallnest/rpcx/client"
 	"github.com/smallnest/rpcx/protocol"
 	"github.com/smallnest/rpcx/share"
@@ -303,7 +302,7 @@ func (xc *XClient) start() (err error) {
 }
 
 func (xc *XClient) reload() (err error) {
-	for name, value := range options.Service {
+	for name, value := range xshare.Service {
 		if selector := xc.selector(name, value); selector == nil {
 			return values.Errorf(0, "Service config error:%v %v", name, value)
 		} else if _, err = xc.addServicePath(name, selector); err != nil {
