@@ -3,6 +3,7 @@ package xshare
 import (
 	"context"
 	"fmt"
+	"github.com/hwcer/yyds/options"
 	"github.com/smallnest/rpcx/share"
 	"net/url"
 	"strconv"
@@ -67,7 +68,7 @@ func (this *Selector) Select(ctx context.Context, servicePath, serviceMethod str
 func (this *Selector) UpdateServer(servers map[string]string) {
 	ss := make(map[string][]*node)
 	//logger.Debug("===================UpdateServer:%v============================", this.servicePath)
-	prefix := fmt.Sprintf("%v/%v/", Options.BasePath, this.servicePath)
+	prefix := fmt.Sprintf("%v/%v/", options.Options.Appid, this.servicePath)
 	for address, value := range servers {
 		if !strings.HasPrefix(address, prefix) {
 			continue

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/hwcer/cosgo/utils"
 	"github.com/hwcer/cosrpc/redis"
+	"github.com/hwcer/yyds/options"
 	"github.com/rpcxio/libkv/store"
 	"github.com/smallnest/rpcx/client"
 	"net/url"
@@ -23,7 +24,7 @@ func Discovery() (client.ServiceDiscovery, error) {
 	if err != nil {
 		return nil, err
 	}
-	rpcxDiscovery, err = redis.NewDiscovery(Options.BasePath, servicePath, address, opt)
+	rpcxDiscovery, err = redis.NewDiscovery(options.Options.Appid, servicePath, address, opt)
 	if err != nil {
 		return nil, err
 	}
@@ -42,7 +43,7 @@ func Register(urlRpcxAddr *utils.Address) (*redis.Register, error) {
 	rpcxRegister = &redis.Register{
 		ServiceAddress: fmt.Sprintf("%v%v:%v", AddressPrefix(), urlRpcxAddr.Host, urlRpcxAddr.Port),
 		RedisServers:   address,
-		BasePath:       Options.BasePath,
+		BasePath:       options.Options.Appid,
 		Options:        opt,
 		UpdateInterval: time.Second * 10,
 	}
@@ -55,7 +56,7 @@ func serviceDiscoveryFilter(kv *client.KVPair) bool {
 
 func getRedisAddress() (address []string, opts *store.Config, err error) {
 	var uri *url.URL
-	uri, err = utils.NewUrl(Options.Redis, "tcp")
+	uri, err = utils.NewUrl(options.Rpcx.Redis, "tcp")
 	if err != nil {
 		return
 	}
