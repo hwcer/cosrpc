@@ -6,12 +6,10 @@ toolchain go1.23.2
 
 replace (
 	github.com/hwcer/cosgo v1.1.0 => ../cosgo
-	github.com/hwcer/yyds v0.0.0-20241227071904-0697b6b6e1d3 => ../../yyds
 )
 
 require (
 	github.com/hwcer/cosgo v1.1.0
-	github.com/hwcer/yyds v0.0.0-20241227071904-0697b6b6e1d3
 	github.com/rcrowley/go-metrics v0.0.0-20201227073835-cf1acfcdf475
 	github.com/rpcxio/libkv v0.5.1
 	github.com/smallnest/rpcx v1.8.36
