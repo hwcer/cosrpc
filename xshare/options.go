@@ -18,7 +18,7 @@ const (
 var Service = map[string]string{}
 
 var Options = &Rpcx{
-	Timeout:             2,
+	Timeout:             10,
 	Network:             "tcp",
 	Address:             ":8100",
 	BasePath:            "cosrpc",
