@@ -1,7 +1,6 @@
 package xshare
 
 import (
-	"fmt"
 	"github.com/hwcer/cosgo/utils"
 	"strings"
 	"time"
@@ -45,7 +44,7 @@ func Address() *utils.Address {
 		rpcServerAddress.Retry = 100
 	}
 	if rpcServerAddress.Host == "" {
-		rpcServerAddress.Host, _ = LocalIpv4()
+		rpcServerAddress.Host = "0.0.0.0"
 	}
 	rpcServerAddress.Scheme = Options.Network
 	return rpcServerAddress
@@ -68,23 +67,4 @@ func AddressFormat(address string) string {
 	b.WriteString(prefix)
 	b.WriteString(address)
 	return b.String()
-}
-
-func LocalIpv4() (ip string, err error) {
-	var ipv4 []string
-	if ipv4, err = utils.LocalIPv4s(); err != nil {
-		return
-	}
-	for _, s := range ipv4 {
-		i := strings.Index(s, ".")
-		if k := s[:i]; k == "192" || k == "10" || k == "172" {
-			return s, nil
-		}
-	}
-	if len(ipv4) == 0 {
-		err = fmt.Errorf("无法获取服务器的内网IP")
-	} else {
-		ip = ipv4[0]
-	}
-	return
 }

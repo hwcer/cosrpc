@@ -166,15 +166,3 @@ func (xs *XServer) Close() (err error) {
 	}
 	return
 }
-
-func (xs *XServer) Address() *utils.Address {
-	address := utils.NewAddress(xshare.Options.Address)
-	if address.Retry == 0 {
-		address.Retry = 100
-	}
-	if address.Host == "" {
-		address.Host, _ = xshare.LocalIpv4()
-	}
-	address.Scheme = xshare.Options.Network
-	return address
-}
