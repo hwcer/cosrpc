@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"github.com/hwcer/cosgo/binder"
 	"github.com/hwcer/cosrpc/xserver"
 	"github.com/hwcer/cosrpc/xshare"
 	"github.com/smallnest/rpcx/client"
@@ -36,6 +37,10 @@ func (c *Client) Auth(auth string)                              {}
 func (c *Client) Go(ctx context.Context, serviceMethod string, args interface{}, reply interface{}, done chan *client.Call) (*client.Call, error) {
 	return nil, nil
 }
+func (c *Client) Binder(ctx context.Context, mod xshare.BinderMod) (r binder.Binder) {
+	return xshare.GetBinderFromContext(ctx, mod)
+}
+
 func (c *Client) Call(ctx context.Context, serviceMethod string, args interface{}, reply interface{}) (err error) {
 	if reply != nil && reflect.TypeOf(reply).Kind() != reflect.Ptr {
 		return errors.New("client.call reply must pointer")
@@ -49,8 +54,7 @@ func (c *Client) Call(ctx context.Context, serviceMethod string, args interface{
 	req.ServicePath = c.servicePath
 	req.ServiceMethod = serviceMethod
 	sc := &Context{req: req, meta: map[any]any{}}
-	bind := xshare.Binder(sc)
-	if req.Payload, err = bind.Marshal(args); err != nil {
+	if req.Payload, err = c.Binder(ctx, xshare.BinderModReq).Marshal(args); err != nil {
 		return err
 	}
 
@@ -79,7 +83,7 @@ func (c *Client) Call(ctx context.Context, serviceMethod string, args interface{
 	case *string:
 		*r = sc.reply.String()
 	default:
-		err = bind.Unmarshal(sc.reply.Bytes(), reply)
+		err = c.Binder(ctx, xshare.BinderModRes).Unmarshal(sc.reply.Bytes(), reply)
 	}
 	return err
 }

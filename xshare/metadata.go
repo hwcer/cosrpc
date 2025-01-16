@@ -18,21 +18,63 @@ func NewMetadata(args ...string) Metadata {
 
 type Metadata map[string]string
 
-func (this Metadata) Set(k string, v any) {
-	this[k] = fmt.Sprintf("%v", v)
+func (meta Metadata) Set(k string, v any) {
+	switch i := v.(type) {
+	case string:
+		meta[k] = i
+	default:
+		meta[k] = fmt.Sprintf("%v", v)
+	}
 }
 
-func (this Metadata) SetAddress(v string) {
-	this[ServiceSelectorServerAddress] = v
+func (meta Metadata) SetAddress(v string) {
+	meta[ServiceSelectorServerAddress] = v
 }
 
-func (this Metadata) SetServerId(v int32) {
-	this[ServiceSelectorServerId] = strconv.Itoa(int(v))
+func (meta Metadata) SetServerId(v int32) {
+	meta[ServiceSelectorServerId] = strconv.Itoa(int(v))
 }
-func (this Metadata) SetContentType(v string) {
-	this["Content-Type"] = v
+func (meta Metadata) SetContentType(v string) {
+	meta["Content-Type"] = v
 }
 
-func (this Metadata) Json() map[string]string {
-	return this
+func (meta Metadata) Json() map[string]string {
+	return meta
+}
+
+func (meta Metadata) Get(k string) string {
+	return meta[k]
+}
+
+func (meta Metadata) GetInt(k string) int {
+	return int(meta.GetInt64(k))
+}
+
+func (meta Metadata) GetInt32(k string) int32 {
+	return int32(meta.GetInt64(k))
+}
+
+func (meta Metadata) GetInt64(k string) int64 {
+	s := meta[k]
+	if s == "" {
+		return 0
+	}
+	i, _ := strconv.ParseInt(s, 10, 64)
+	return i
+}
+
+func (meta Metadata) GetFloat32(k string) float32 {
+	return float32(meta.GetFloat64(k))
+}
+
+func (meta Metadata) GetFloat64(k string) (r float64) {
+	s := meta[k]
+	if s == "" {
+		return 0
+	}
+	i, _ := strconv.ParseFloat(s, 64)
+	return i
+}
+func (meta Metadata) GetString(k string) (r string) {
+	return meta[k]
 }

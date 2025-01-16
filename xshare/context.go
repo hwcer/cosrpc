@@ -2,6 +2,7 @@ package xshare
 
 import (
 	"bytes"
+	"fmt"
 	"github.com/hwcer/cosgo/binder"
 	"github.com/hwcer/cosgo/logger"
 	"github.com/hwcer/cosgo/values"
@@ -30,8 +31,8 @@ type Context struct {
 	body values.Values
 }
 
-func (this *Context) Binder(b ...binder.Interface) binder.Interface {
-	return Binder(this, b...)
+func (this *Context) Binder(mod BinderMod) binder.Binder {
+	return GetBinderFromMetadata(this.Metadata(), mod)
 }
 
 // Reader 返回一个io.Reader来读取包体
@@ -45,12 +46,12 @@ func (this *Context) Bytes() []byte {
 func (this *Context) Write(data []byte) error {
 	return this.ctx.Write(data)
 }
-func (this *Context) Bind(i interface{}, bs ...binder.Interface) error {
+func (this *Context) Bind(i interface{}) error {
 	data := this.ctx.Payload()
 	if len(data) == 0 {
 		return nil
 	}
-	bind := this.Binder(bs...)
+	bind := this.Binder(BinderModReq)
 	return bind.Unmarshal(data, i)
 }
 func (this *Context) Conn() net.Conn {
@@ -97,7 +98,7 @@ func (this *Context) GetValue(key any) any {
 func (this *Context) SetValue(key, val any) {
 	this.ctx.SetValue(key, val)
 }
-func (this *Context) Metadata() map[string]string {
+func (this *Context) Metadata() Metadata {
 	return this.ctx.Metadata()
 }
 
@@ -107,13 +108,18 @@ func (this *Context) GetMetadata(key string) (val string) {
 }
 
 // SetMetadata SET RES Metadata
-func (this *Context) SetMetadata(key, val string) {
+func (this *Context) SetMetadata(key string, val any) {
 	i := this.ctx.Get(share.ResMetaDataKey)
 	meta, _ := i.(map[string]string)
 	if meta == nil {
 		meta = make(map[string]string)
 	}
-	meta[key] = val
+	switch v := val.(type) {
+	case string:
+		meta[key] = v
+	default:
+		meta[key] = fmt.Sprintf("%v", val)
+	}
 	this.ctx.SetValue(share.ResMetaDataKey, meta)
 }
 

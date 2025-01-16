@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/hwcer/cosgo/binder"
 	"github.com/hwcer/cosgo/logger"
 	"github.com/hwcer/cosgo/registry"
 	"github.com/hwcer/cosgo/scc"
@@ -157,16 +158,23 @@ func (xc *XClient) Broadcast(ctx context.Context, servicePath, serviceMethod str
 }
 
 // XCall 使用默认的message发起请求
-func (xc *XClient) XCall(ctx context.Context, servicePath, serviceMethod string, args any, reply any) error {
+func (xc *XClient) XCall(ctx context.Context, servicePath, serviceMethod string, args any, reply any) (err error) {
+	defer func() {
+		if r := recover(); r != nil {
+			err = fmt.Errorf("%v", r)
+		}
+		if err != nil {
+			logger.Debug("cosrpc XCall err:%v", err)
+		}
+	}()
 	if reply != nil && reflect.TypeOf(reply).Kind() != reflect.Ptr {
 		return errors.New("client.call reply must pointer")
 	}
-	var err error
 	var data []byte
 	if v, ok := args.([]byte); ok {
 		data = v
 	} else {
-		data, err = xshare.Binder(nil).Marshal(args)
+		data, err = xc.Binder(ctx, xshare.BinderModReq).Marshal(args)
 	}
 	if err != nil {
 		return err
@@ -183,7 +191,7 @@ func (xc *XClient) XCall(ctx context.Context, servicePath, serviceMethod string,
 		return err
 	}
 	msg := &values.Message{}
-	if err = xshare.Binder(nil).Unmarshal(v, msg); err != nil {
+	if err = xc.Binder(ctx, xshare.BinderModRes).Unmarshal(v, msg); err != nil {
 		return err
 	}
 	if reply != nil {
@@ -194,8 +202,20 @@ func (xc *XClient) XCall(ctx context.Context, servicePath, serviceMethod string,
 	return err
 }
 
+func (xc *XClient) Binder(ctx context.Context, mod xshare.BinderMod) (r binder.Binder) {
+	return xshare.GetBinderFromContext(ctx, mod)
+}
+
 // Async 异步
 func (xc *XClient) Async(ctx context.Context, servicePath, serviceMethod string, args any) (done *client.Call, err error) {
+	defer func() {
+		if r := recover(); r != nil {
+			err = fmt.Errorf("%v", r)
+		}
+		if err != nil {
+			logger.Debug("cosrpc Async err:%v", err)
+		}
+	}()
 	c := xc.Client(servicePath)
 	if c == nil {
 		return nil, fmt.Errorf("can not found any server:%v", servicePath)
@@ -209,7 +229,7 @@ func (xc *XClient) Async(ctx context.Context, servicePath, serviceMethod string,
 	if v, ok := args.([]byte); ok {
 		data = v
 	} else {
-		data, err = xshare.Binder(nil).Marshal(args)
+		data, err = xc.Binder(ctx, xshare.BinderModReq).Marshal(args)
 	}
 	if err != nil {
 		return nil, err

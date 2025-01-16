@@ -1,24 +1,53 @@
 package xshare
 
-import "github.com/hwcer/cosgo/binder"
+import (
+	"context"
+	"github.com/hwcer/cosgo/binder"
+	"github.com/smallnest/rpcx/share"
+)
 
-type BinderContext interface {
-	GetMetadata(string) string
-	ServicePath() string
-	ServiceMethod() string
-}
+type BinderMod int8
 
-var Binder = func(c BinderContext, bs ...binder.Interface) binder.Interface {
-	if len(bs) > 0 {
-		return bs[0]
+const (
+	BinderModReq BinderMod = iota
+	BinderModRes
+)
+
+const (
+	MetadataHeaderContentTypeRequest  = "_ctq" //客户端请求使用的序列化方式
+	MetadataHeaderContentTypeResponse = "_cts" //客户端可以接受的序列化方式,默认不设置和请求序列化一样
+)
+
+func GetBinderFromContext(ctx context.Context, mod BinderMod) (r binder.Binder) {
+	if ctx == nil {
+		return Binder
 	}
-	if c == nil {
-		return binder.Json
-	}
-	if t := c.GetMetadata(binder.ContentType); t != "" {
-		if r := binder.New(t); r != nil {
-			return r
+	if i := ctx.Value(share.ReqMetaDataKey); i != nil {
+		if meta, ok := i.(map[string]string); ok {
+			r = GetBinderFromMetadata(meta, mod)
+		} else {
+			r = Binder
 		}
 	}
-	return binder.Json
+	return
+}
+
+func GetBinderFromMetadata(meta Metadata, mod BinderMod) (r binder.Binder) {
+	var k string
+	if mod == BinderModReq {
+		k = MetadataHeaderContentTypeRequest
+	} else {
+		k = MetadataHeaderContentTypeResponse
+	}
+	if ct := meta.Get(k); ct != "" {
+		r = binder.New(ct)
+	}
+	if r == nil {
+		if mod == BinderModRes {
+			r = GetBinderFromMetadata(meta, BinderModReq) //保持和请求时一致
+		} else {
+			r = Binder
+		}
+	}
+	return
 }

@@ -6,6 +6,8 @@ import (
 	"github.com/smallnest/rpcx/protocol"
 )
 
+// 双向通讯时 作为服务使用
+
 type Context struct {
 	*protocol.Message
 }

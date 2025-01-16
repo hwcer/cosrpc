@@ -11,6 +11,7 @@ import (
 type HandlerFilter func(node *registry.Node) bool
 type HandlerCaller func(node *registry.Node, c *Context) (interface{}, error)
 type HandlerMetadata func() string
+type HandlerMiddleware func(*Context) error
 type HandlerSerialize func(c *Context, reply interface{}) ([]byte, error)
 
 type handleCaller interface {
@@ -18,10 +19,11 @@ type handleCaller interface {
 }
 
 type Handler struct {
-	caller    HandlerCaller
-	filter    HandlerFilter
-	metadata  []HandlerMetadata
-	serialize HandlerSerialize
+	caller     HandlerCaller
+	filter     HandlerFilter
+	metadata   []HandlerMetadata
+	middleware []HandlerMiddleware
+	serialize  HandlerSerialize
 }
 
 func (this *Handler) Use(src interface{}) {
@@ -33,6 +35,9 @@ func (this *Handler) Use(src interface{}) {
 	}
 	if v, ok := src.(HandlerMetadata); ok {
 		this.metadata = append(this.metadata, v)
+	}
+	if v, ok := src.(HandlerMiddleware); ok {
+		this.middleware = append(this.middleware, v)
 	}
 	if v, ok := src.(HandlerSerialize); ok {
 		this.serialize = v
@@ -76,6 +81,11 @@ func (this *Handler) Caller(node *registry.Node, c *Context) (reply interface{},
 			logger.Error(e)
 		}
 	}()
+	for _, m := range this.middleware {
+		if err = m(c); err != nil {
+			return
+		}
+	}
 	if this.caller != nil {
 		return this.caller(node, c)
 	}
@@ -100,7 +110,7 @@ func (this *Handler) Marshal(c *Context, reply interface{}) (data []byte, err er
 	case *[]byte:
 		data = *v
 	default:
-		data, err = c.Binder().Marshal(values.Parse(reply))
+		data, err = c.Binder(BinderModRes).Marshal(values.Parse(reply))
 	}
 	return
 }
