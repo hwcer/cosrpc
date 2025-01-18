@@ -164,7 +164,8 @@ func (xc *XClient) XCall(ctx context.Context, servicePath, serviceMethod string,
 			err = fmt.Errorf("%v", r)
 		}
 		if err != nil {
-			logger.Debug("cosrpc XCall err:%v", err)
+			logger.Debug("cosrpc XCall Error:%v", err)
+			logger.Debug("cosrpc XCall Stack:%v", string(debug.Stack()))
 		}
 	}()
 	if reply != nil && reflect.TypeOf(reply).Kind() != reflect.Ptr {
