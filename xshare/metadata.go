@@ -38,9 +38,9 @@ func (meta Metadata) SetContentType(v string) {
 	meta["Content-Type"] = v
 }
 
-func (meta Metadata) Json() map[string]string {
-	return meta
-}
+//func (meta Metadata) Json() map[string]string {
+//	return meta
+//}
 
 func (meta Metadata) Get(k string) string {
 	return meta[k]

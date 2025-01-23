@@ -25,9 +25,10 @@ func GetBinderFromContext(ctx context.Context, mod BinderMod) (r binder.Binder) 
 	if i := ctx.Value(share.ReqMetaDataKey); i != nil {
 		if meta, ok := i.(map[string]string); ok {
 			r = GetBinderFromMetadata(meta, mod)
-		} else {
-			r = Binder
 		}
+	}
+	if r == nil {
+		r = Binder
 	}
 	return
 }

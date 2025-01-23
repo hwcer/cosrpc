@@ -214,7 +214,7 @@ func (xc *XClient) Async(ctx context.Context, servicePath, serviceMethod string,
 			err = fmt.Errorf("%v", r)
 		}
 		if err != nil {
-			logger.Debug("cosrpc Async err:%v", err)
+			logger.Debug("cosrpc Async err:%v\n%v", err, string(debug.Stack()))
 		}
 	}()
 	c := xc.Client(servicePath)
@@ -242,10 +242,10 @@ func (xc *XClient) CallWithMetadata(req, res xshare.Metadata, servicePath, servi
 	ctx, cancel := xc.scc.WithTimeout(xshare.Timeout())
 	defer cancel()
 	if req != nil {
-		ctx = context.WithValue(ctx, share.ReqMetaDataKey, req.Json())
+		ctx = context.WithValue(ctx, share.ReqMetaDataKey, req)
 	}
 	if res != nil {
-		ctx = context.WithValue(ctx, share.ResMetaDataKey, res.Json())
+		ctx = context.WithValue(ctx, share.ResMetaDataKey, res)
 	}
 	return xc.XCall(ctx, servicePath, serviceMethod, args, reply)
 }

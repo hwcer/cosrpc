@@ -36,14 +36,14 @@ func Async(ctx context.Context, servicePath, serviceMethod string, args any) (ca
 func CallWithServerId(ctx context.Context, sid int32, servicePath, serviceMethod string, args, reply any) (err error) {
 	metadata := make(xshare.Metadata)
 	metadata.SetServerId(sid)
-	return Default.CallWithMetadata(metadata.Json(), nil, servicePath, registry.Join(serviceMethod), args, reply)
+	return Default.CallWithMetadata(metadata, nil, servicePath, registry.Join(serviceMethod), args, reply)
 }
 
 // CallWithAddress 通过服务器地址发消息
 func CallWithAddress(address string, servicePath, serviceMethod string, args, reply any) (err error) {
 	metadata := make(xshare.Metadata)
 	metadata.SetAddress(address)
-	return Default.CallWithMetadata(metadata.Json(), nil, servicePath, registry.Join(serviceMethod), args, reply)
+	return Default.CallWithMetadata(metadata, nil, servicePath, registry.Join(serviceMethod), args, reply)
 }
 
 // CallWithMetadata 自定义metadata
