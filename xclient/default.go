@@ -5,6 +5,7 @@ import (
 	"github.com/hwcer/cosgo/registry"
 	"github.com/hwcer/cosrpc/xshare"
 	"github.com/smallnest/rpcx/client"
+	"strconv"
 	"time"
 )
 
@@ -33,21 +34,21 @@ func Async(ctx context.Context, servicePath, serviceMethod string, args any) (ca
 }
 
 // CallWithServerId 通过特定服务器ID发消息
-func CallWithServerId(ctx context.Context, sid int32, servicePath, serviceMethod string, args, reply any) (err error) {
-	metadata := make(xshare.Metadata)
-	metadata.SetServerId(sid)
+func CallWithServerId(sid int32, servicePath, serviceMethod string, args, reply any) (err error) {
+	metadata := make(map[string]string)
+	metadata[xshare.ServiceSelectorServerId] = strconv.Itoa(int(sid))
 	return Default.CallWithMetadata(metadata, nil, servicePath, registry.Join(serviceMethod), args, reply)
 }
 
 // CallWithAddress 通过服务器地址发消息
 func CallWithAddress(address string, servicePath, serviceMethod string, args, reply any) (err error) {
-	metadata := make(xshare.Metadata)
-	metadata.SetAddress(address)
+	metadata := make(map[string]string)
+	metadata[xshare.ServiceSelectorServerAddress] = address
 	return Default.CallWithMetadata(metadata, nil, servicePath, registry.Join(serviceMethod), args, reply)
 }
 
 // CallWithMetadata 自定义metadata
-func CallWithMetadata(req, res xshare.Metadata, servicePath, serviceMethod string, args, reply any) (err error) {
+func CallWithMetadata(req, res map[string]string, servicePath, serviceMethod string, args, reply any) (err error) {
 	return Default.CallWithMetadata(req, res, servicePath, registry.Join(serviceMethod), args, reply)
 }
 

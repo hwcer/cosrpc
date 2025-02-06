@@ -98,7 +98,7 @@ func (this *Context) GetValue(key any) any {
 func (this *Context) SetValue(key, val any) {
 	this.ctx.SetValue(key, val)
 }
-func (this *Context) Metadata() Metadata {
+func (this *Context) Metadata() map[string]string {
 	return this.ctx.Metadata()
 }
 
