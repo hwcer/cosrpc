@@ -163,10 +163,6 @@ func (xc *XClient) XCall(ctx context.Context, servicePath, serviceMethod string,
 		if r := recover(); r != nil {
 			err = fmt.Errorf("%v", r)
 		}
-		if err != nil {
-			logger.Debug("cosrpc XCall Error:%v", err)
-			logger.Debug("cosrpc XCall Stack:%v", string(debug.Stack()))
-		}
 	}()
 	if reply != nil && reflect.TypeOf(reply).Kind() != reflect.Ptr {
 		return errors.New("client.call reply must pointer")

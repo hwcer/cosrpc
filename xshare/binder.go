@@ -33,14 +33,14 @@ func GetBinderFromContext(ctx context.Context, mod BinderMod) (r binder.Binder) 
 	return
 }
 
-func GetBinderFromMetadata(meta Metadata, mod BinderMod) (r binder.Binder) {
+func GetBinderFromMetadata(meta map[string]string, mod BinderMod) (r binder.Binder) {
 	var k string
 	if mod == BinderModReq {
 		k = MetadataHeaderContentTypeRequest
 	} else {
 		k = MetadataHeaderContentTypeResponse
 	}
-	if ct := meta.Get(k); ct != "" {
+	if ct := meta[k]; ct != "" {
 		r = binder.New(ct)
 	}
 	if r == nil {

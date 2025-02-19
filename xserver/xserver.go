@@ -34,15 +34,23 @@ func New() *XServer {
 type XServer struct {
 	*server.Server
 	started  int32
-	Registry *registry.Registry
 	register *redis.Register
+	Registry *registry.Registry
 }
 
 // rpcxHandle 闭包绑定 route和Node
-func (xs *XServer) handle(node *registry.Node) func(*server.Context) error {
-	return func(sc *server.Context) error {
-		return xs.Caller(sc, node)
+//
+//	func (xs *XServer) handle(node *registry.Node) func(*server.Context) error {
+//		return func(sc *server.Context) error {
+//			return xs.Caller(sc, node)
+//		}
+//	}
+func (xs *XServer) handle(sc *server.Context) error {
+	node, ok := xs.Registry.Match(sc.ServicePath(), sc.ServiceMethod())
+	if !ok {
+		return errors.New("service not found")
 	}
+	return xs.Caller(sc, node)
 }
 
 // Caller services入口
@@ -52,6 +60,7 @@ func (xs *XServer) Caller(sc xshare.XContext, node *registry.Node) (err error) {
 			logger.Alert("rpcx server recover error:%v\n%v", r, string(debug.Stack()))
 		}
 	}()
+
 	handler, ok := node.Service.Handler.(*xshare.Handler)
 	if !ok {
 		return errors.New("handler unknown")
@@ -69,10 +78,18 @@ func (xs *XServer) Caller(sc xshare.XContext, node *registry.Node) (err error) {
 	return
 }
 
-//func (this *XServer) Server() *server.Server {
-//	return this.rpcServer
-//}
-
+// Reload 动态加载，热更
+func (xs *XServer) Reload(nodes map[string]*registry.Node) error {
+	if err := xs.Registry.Reload(nodes); err != nil {
+		return err
+	}
+	handles := make(map[string]server.Handler)
+	for k, _ := range nodes {
+		handles[k] = xs.handle
+	}
+	xs.Server.UpdateHandler(handles)
+	return nil
+}
 func (xs *XServer) Service(name string, handler ...interface{}) *registry.Service {
 	service := xs.Registry.Service(name)
 	if service.Handler == nil {
@@ -98,7 +115,7 @@ func (xs *XServer) Start() (err error) {
 
 	//启动服务
 	xs.Registry.Nodes(func(node *registry.Node) (r bool) {
-		xs.Server.AddHandler(node.Service.Name(), node.Name(), xs.handle(node))
+		xs.Server.AddHandler(node.Service.Name(), node.Name(), xs.handle)
 		return true
 	})
 
