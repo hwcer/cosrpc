@@ -47,7 +47,7 @@ func CallWithAddress(address string, servicePath, serviceMethod string, args, re
 }
 
 // CallWithMetadata 自定义metadata
-func CallWithMetadata(req, res xshare.Metadata, servicePath, serviceMethod string, args, reply any) (err error) {
+func CallWithMetadata(req, res map[string]string, servicePath, serviceMethod string, args, reply any) (err error) {
 	return Default.CallWithMetadata(req, res, servicePath, registry.Join(serviceMethod), args, reply)
 }
 
