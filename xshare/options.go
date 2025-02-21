@@ -17,6 +17,13 @@ const (
 )
 
 var Service = map[string]string{}
+var Selector = selector{} //预设选择器
+
+type selector map[string]any
+
+func (s selector) Set(servicePath string, selectorType any) {
+	s[servicePath] = selectorType
+}
 
 var Options = &Rpcx{
 	Timeout:             10,

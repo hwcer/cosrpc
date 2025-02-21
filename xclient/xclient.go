@@ -331,9 +331,12 @@ func (xc *XClient) reload() (err error) {
 
 func (xc *XClient) selector(k, v string) (r any) {
 	if s := strings.ToLower(v); s == xshare.SelectorTypeDiscovery {
-		return xshare.NewSelector(k)
+		var ok bool
+		if r, ok = xshare.Selector[k]; !ok {
+			r = client.RandomSelect
+		}
 	} else if s == xshare.SelectorTypeLocal {
-		return xshare.Address().String()
+		r = xshare.Address().String()
 	} else if strings.Contains(v, ",") {
 		r = strings.Split(v, ",")
 	} else {

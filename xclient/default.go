@@ -5,7 +5,6 @@ import (
 	"github.com/hwcer/cosgo/registry"
 	"github.com/hwcer/cosrpc/xshare"
 	"github.com/smallnest/rpcx/client"
-	"strconv"
 	"time"
 )
 
@@ -31,20 +30,6 @@ func XCall(ctx context.Context, servicePath, serviceMethod string, args, reply a
 // Async 异步调用,仅仅调用无返回值
 func Async(ctx context.Context, servicePath, serviceMethod string, args any) (call *client.Call, err error) {
 	return Default.Async(ctx, servicePath, registry.Join(serviceMethod), args)
-}
-
-// CallWithServerId 通过特定服务器ID发消息
-func CallWithServerId(sid int32, servicePath, serviceMethod string, args, reply any) (err error) {
-	metadata := make(map[string]string)
-	metadata[xshare.ServiceSelectorServerId] = strconv.Itoa(int(sid))
-	return Default.CallWithMetadata(metadata, nil, servicePath, registry.Join(serviceMethod), args, reply)
-}
-
-// CallWithAddress 通过服务器地址发消息
-func CallWithAddress(address string, servicePath, serviceMethod string, args, reply any) (err error) {
-	metadata := make(map[string]string)
-	metadata[xshare.ServiceSelectorServerAddress] = address
-	return Default.CallWithMetadata(metadata, nil, servicePath, registry.Join(serviceMethod), args, reply)
 }
 
 // CallWithMetadata 自定义metadata
