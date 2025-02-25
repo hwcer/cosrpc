@@ -140,7 +140,7 @@ func (p *Register) Stop() error {
 		}
 		if exist {
 			_ = p.kv.Delete(nodePath)
-			log.Infof("delete path %s", nodePath, err)
+			log.Infof("delete path %s", nodePath)
 		}
 	}
 

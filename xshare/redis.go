@@ -39,8 +39,15 @@ func Register(urlRpcxAddr *utils.Address) (*redis.Register, error) {
 	if err != nil {
 		return nil, err
 	}
+	host := urlRpcxAddr.Host
+	if utils.LocalValid(host) {
+		host, err = utils.LocalIPv4()
+	}
+	if err != nil {
+		return nil, err
+	}
 	rpcxRegister = &redis.Register{
-		ServiceAddress: fmt.Sprintf("%v%v:%v", AddressPrefix(), urlRpcxAddr.Host, urlRpcxAddr.Port),
+		ServiceAddress: fmt.Sprintf("%v%v:%v", AddressPrefix(), host, urlRpcxAddr.Port),
 		RedisServers:   address,
 		BasePath:       Options.BasePath,
 		Options:        opt,
