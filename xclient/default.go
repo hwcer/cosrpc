@@ -36,9 +36,11 @@ func Async(ctx context.Context, servicePath, serviceMethod string, args any) (ca
 func CallWithMetadata(req, res map[string]string, servicePath, serviceMethod string, args, reply any) (err error) {
 	return Default.CallWithMetadata(req, res, servicePath, registry.Join(serviceMethod), args, reply)
 }
-
 func Broadcast(ctx context.Context, servicePath, serviceMethod string, args, reply any) (err error) {
 	return Default.Broadcast(ctx, servicePath, serviceMethod, args, reply)
+}
+func WithTimeout(req, res map[string]string) (context.Context, context.CancelFunc) {
+	return Default.WithTimeout(req, res)
 }
 
 func Start() (err error) {

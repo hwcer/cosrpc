@@ -131,6 +131,17 @@ func (xc *XClient) Client(servicePath string) client.XClient {
 
 }
 
+func (xc *XClient) WithTimeout(req, res map[string]string) (context.Context, context.CancelFunc) {
+	ctx, cancel := xc.scc.WithTimeout(xshare.Timeout())
+	if req != nil {
+		ctx = context.WithValue(ctx, share.ReqMetaDataKey, req)
+	}
+	if res != nil {
+		ctx = context.WithValue(ctx, share.ResMetaDataKey, res)
+	}
+	return ctx, cancel
+}
+
 func (xc *XClient) Call(ctx context.Context, servicePath, serviceMethod string, args, reply any) (err error) {
 	c := xc.Client(servicePath)
 	if c == nil {
