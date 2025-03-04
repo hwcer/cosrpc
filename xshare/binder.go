@@ -13,11 +13,6 @@ const (
 	BinderModRes
 )
 
-const (
-	MetadataHeaderContentTypeRequest  = "_ctq" //客户端请求使用的序列化方式
-	MetadataHeaderContentTypeResponse = "_cts" //客户端可以接受的序列化方式,默认不设置和请求序列化一样
-)
-
 func GetBinderFromContext(ctx context.Context, mod BinderMod) (r binder.Binder) {
 	if ctx == nil {
 		return Binder
@@ -36,19 +31,18 @@ func GetBinderFromContext(ctx context.Context, mod BinderMod) (r binder.Binder) 
 func GetBinderFromMetadata(meta map[string]string, mod BinderMod) (r binder.Binder) {
 	var k string
 	if mod == BinderModReq {
-		k = MetadataHeaderContentTypeRequest
+		k = binder.HeaderContentType
 	} else {
-		k = MetadataHeaderContentTypeResponse
+		k = binder.HeaderAccept
 	}
 	if ct := meta[k]; ct != "" {
 		r = binder.New(ct)
 	}
+	if r == nil && mod == BinderModRes {
+		r = GetBinderFromMetadata(meta, BinderModReq) //保持和请求时一致
+	}
 	if r == nil {
-		if mod == BinderModRes {
-			r = GetBinderFromMetadata(meta, BinderModReq) //保持和请求时一致
-		} else {
-			r = Binder
-		}
+		r = Binder
 	}
 	return
 }

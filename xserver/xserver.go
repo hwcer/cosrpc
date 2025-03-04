@@ -5,8 +5,6 @@ import (
 	"github.com/hwcer/cosgo/logger"
 	"github.com/hwcer/cosgo/registry"
 	"github.com/hwcer/cosgo/scc"
-	"github.com/hwcer/cosgo/utils"
-	"github.com/hwcer/cosrpc/redis"
 	"github.com/hwcer/cosrpc/xshare"
 	"github.com/smallnest/rpcx/server"
 	"runtime/debug"
@@ -19,8 +17,10 @@ type Caller interface {
 	Caller(c *server.Context, node *registry.Node) interface{}
 }
 
-type rpcxServiceHandlerMetadata interface {
-	Metadata() string
+type Register interface {
+	Start() error
+	Stop() error
+	Register(name string, rcvr interface{}, metadata string) (err error)
 }
 
 func New() *XServer {
@@ -34,7 +34,7 @@ func New() *XServer {
 type XServer struct {
 	*server.Server
 	started  int32
-	register *redis.Register
+	Register Register
 	Registry *registry.Registry
 }
 
@@ -103,14 +103,16 @@ func (xs *XServer) Service(name string, handler ...interface{}) *registry.Servic
 	return service
 }
 
-func (xs *XServer) Start() (err error) {
+func (xs *XServer) Start(register Register) (err error) {
 	if xs.Registry.Len() == 0 {
 		return
 	}
 	if !atomic.CompareAndSwapInt32(&xs.started, 0, 1) {
 		return
 	}
-
+	if register != nil {
+		xs.Register = register
+	}
 	address := xshare.Address()
 
 	//启动服务
@@ -126,7 +128,7 @@ func (xs *XServer) Start() (err error) {
 		return
 	}
 
-	if err = xs.startRegister(address); err != nil {
+	if err = xs.startRegister(); err != nil {
 		return
 	}
 	logger.Trace("rpc server started:%v", address.String())
@@ -144,31 +146,31 @@ func (xs *XServer) startServe(network, address string) (err error) {
 	return
 }
 
-func (xs *XServer) startRegister(address *utils.Address) (err error) {
-	if xshare.Options.Redis == "" {
-		return
+func (xs *XServer) startRegister() (err error) {
+	if xs.Register == nil {
+		logger.Alert("register is nil,Can only run in standalone mode")
+		return nil
 	}
 	//注册服务,实现 rpcxServiceHandlerMetadata 才具有服务发现功能
 	service := map[string]string{}
 	xs.Registry.Range(func(s *registry.Service) bool {
 		name := s.Name()
-		if mf, ok := s.Handler.(rpcxServiceHandlerMetadata); ok {
-			service[name] = mf.Metadata()
-		}
+		service[name] = xshare.Metadata.Get(name)
 		return true
 	})
 	if len(service) == 0 {
 		return
 	}
-	if xs.register, err = xshare.Register(address); err != nil {
-		return
-	}
 	for name, metadata := range service {
-		if err = xs.register.Register(name, nil, metadata); err != nil {
+		if err = xs.Register.Register(name, nil, metadata); err != nil {
 			return err
 		}
 	}
-	return xs.register.Start()
+	if err = xs.Register.Start(); err != nil {
+		return
+	}
+	xs.Server.Plugins.Add(xs.Registry)
+	return
 }
 
 func (xs *XServer) Close() (err error) {
@@ -178,8 +180,8 @@ func (xs *XServer) Close() (err error) {
 	if err = xs.Server.Shutdown(nil); err != nil {
 		return
 	}
-	if xs.register != nil {
-		err = xs.register.Stop()
+	if xs.Register != nil {
+		err = xs.Register.Stop()
 	}
 	return
 }

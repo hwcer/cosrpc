@@ -2,39 +2,32 @@ package xclient
 
 import (
 	"context"
-	"github.com/hwcer/cosgo/registry"
 	"github.com/hwcer/cosrpc/xshare"
 	"github.com/smallnest/rpcx/client"
 	"time"
 )
 
-var Default = New(nil)
+var Default = New()
 
 func ping(c *xshare.Context) interface{} {
 	return time.Now().Unix()
 }
 
-func Service(name string, handler ...interface{}) *registry.Service {
-	service := Default.Service(name, handler...)
-	_ = service.Register(ping)
-	return service
-}
-
 func Call(ctx context.Context, servicePath, serviceMethod string, args, reply any) (err error) {
-	return Default.Call(ctx, servicePath, registry.Join(serviceMethod), args, reply)
+	return Default.Call(ctx, servicePath, serviceMethod, args, reply)
 }
 func XCall(ctx context.Context, servicePath, serviceMethod string, args, reply any) (err error) {
-	return Default.XCall(ctx, servicePath, registry.Join(serviceMethod), args, reply)
+	return Default.XCall(ctx, servicePath, serviceMethod, args, reply)
 }
 
 // Async 异步调用,仅仅调用无返回值
 func Async(ctx context.Context, servicePath, serviceMethod string, args any) (call *client.Call, err error) {
-	return Default.Async(ctx, servicePath, registry.Join(serviceMethod), args)
+	return Default.Async(ctx, servicePath, serviceMethod, args)
 }
 
 // CallWithMetadata 自定义metadata
 func CallWithMetadata(req, res map[string]string, servicePath, serviceMethod string, args, reply any) (err error) {
-	return Default.CallWithMetadata(req, res, servicePath, registry.Join(serviceMethod), args, reply)
+	return Default.CallWithMetadata(req, res, servicePath, serviceMethod, args, reply)
 }
 func Broadcast(ctx context.Context, servicePath, serviceMethod string, args, reply any) (err error) {
 	return Default.Broadcast(ctx, servicePath, serviceMethod, args, reply)
@@ -43,10 +36,6 @@ func WithTimeout(req, res map[string]string) (context.Context, context.CancelFun
 	return Default.WithTimeout(req, res)
 }
 
-func Start() (err error) {
-	return Default.Start()
-}
-
-func Close() (err error) {
-	return Default.Close()
+func Start(discovery Discovery) (err error) {
+	return Default.Start(discovery)
 }

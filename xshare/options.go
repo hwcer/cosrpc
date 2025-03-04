@@ -10,21 +10,6 @@ import (
 var Binder binder.Binder = binder.Json
 var rpcServerAddress *utils.Address
 
-const (
-	SelectorTypeLocal     = "local"     //本地程序内访问
-	SelectorTypeProcess   = "process"   //进程内访问
-	SelectorTypeDiscovery = "discovery" //服务发现
-)
-
-var Service = map[string]string{}
-var Selector = selector{} //预设选择器
-
-type selector map[string]any
-
-func (s selector) Set(servicePath string, selectorType any) {
-	s[servicePath] = selectorType
-}
-
 var Options = &Rpcx{
 	Timeout:             10,
 	Network:             "tcp",
@@ -35,7 +20,7 @@ var Options = &Rpcx{
 }
 
 type Rpcx = struct {
-	Redis               string //服务发现
+	//Redis               string //服务发现
 	Timeout             int32
 	Network             string
 	Address             string //仅仅启动服务器时需要

@@ -16,8 +16,8 @@ func Reload(nodes map[string]*registry.Node) error {
 	return Default.Reload(nodes)
 }
 
-func Start() (err error) {
-	return Default.Start()
+func Start(register Register) (err error) {
+	return Default.Start(register)
 }
 
 func Close() (err error) {
