@@ -37,7 +37,7 @@ func (c *Client) Auth(auth string)                              {}
 func (c *Client) Go(ctx context.Context, serviceMethod string, args interface{}, reply interface{}, done chan *client.Call) (*client.Call, error) {
 	return nil, nil
 }
-func (c *Client) Binder(ctx context.Context, mod xshare.BinderMod) (r binder.Binder) {
+func (c *Client) Binder(ctx context.Context, mod binder.ContentTypeMod) (r binder.Binder) {
 	return xshare.GetBinderFromContext(ctx, mod)
 }
 
@@ -54,7 +54,7 @@ func (c *Client) Call(ctx context.Context, serviceMethod string, args interface{
 	req.ServicePath = c.servicePath
 	req.ServiceMethod = serviceMethod
 	sc := &Context{req: req, meta: map[any]any{}}
-	if req.Payload, err = c.Binder(ctx, xshare.BinderModReq).Marshal(args); err != nil {
+	if req.Payload, err = c.Binder(ctx, binder.ContentTypeModReq).Marshal(args); err != nil {
 		return err
 	}
 
@@ -83,7 +83,7 @@ func (c *Client) Call(ctx context.Context, serviceMethod string, args interface{
 	case *string:
 		*r = sc.reply.String()
 	default:
-		err = c.Binder(ctx, xshare.BinderModRes).Unmarshal(sc.reply.Bytes(), reply)
+		err = c.Binder(ctx, binder.ContentTypeModRes).Unmarshal(sc.reply.Bytes(), reply)
 	}
 	return err
 }

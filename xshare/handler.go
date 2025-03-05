@@ -1,6 +1,7 @@
 package xshare
 
 import (
+	"github.com/hwcer/cosgo/binder"
 	"github.com/hwcer/cosgo/logger"
 	"github.com/hwcer/cosgo/registry"
 	"github.com/hwcer/cosgo/values"
@@ -110,7 +111,7 @@ func (this *Handler) Marshal(c *Context, reply interface{}) (data []byte, err er
 	case *[]byte:
 		data = *v
 	default:
-		data, err = c.Binder(BinderModRes).Marshal(values.Parse(reply))
+		data, err = c.Binder(binder.ContentTypeModReq).Marshal(values.Parse(reply))
 	}
 	return
 }

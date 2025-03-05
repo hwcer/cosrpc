@@ -31,8 +31,8 @@ type Context struct {
 	body values.Values
 }
 
-func (this *Context) Binder(mod BinderMod) binder.Binder {
-	return GetBinderFromMetadata(this.Metadata(), mod)
+func (this *Context) Binder(mod binder.ContentTypeMod) binder.Binder {
+	return binder.GetContentType(this.Metadata(), mod)
 }
 
 // Reader 返回一个io.Reader来读取包体
@@ -51,7 +51,7 @@ func (this *Context) Bind(i interface{}) error {
 	if len(data) == 0 {
 		return nil
 	}
-	bind := this.Binder(BinderModReq)
+	bind := this.Binder(binder.ContentTypeModReq)
 	return bind.Unmarshal(data, i)
 }
 func (this *Context) Conn() net.Conn {

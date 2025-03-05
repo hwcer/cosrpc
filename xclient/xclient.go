@@ -152,7 +152,7 @@ func (xc *XClient) Broadcast(ctx context.Context, servicePath, serviceMethod str
 	if v, ok := args.([]byte); ok {
 		data = v
 	} else {
-		data, err = xc.Binder(ctx, xshare.BinderModReq).Marshal(args)
+		data, err = xc.Binder(ctx, binder.ContentTypeModReq).Marshal(args)
 	}
 	if err = c.Broadcast(ctx, serviceMethod, data, reply); err != nil {
 		logger.Debug("Broadcast error:%v", err)
@@ -174,7 +174,7 @@ func (xc *XClient) XCall(ctx context.Context, servicePath, serviceMethod string,
 	if v, ok := args.([]byte); ok {
 		data = v
 	} else {
-		data, err = xc.Binder(ctx, xshare.BinderModReq).Marshal(args)
+		data, err = xc.Binder(ctx, binder.ContentTypeModReq).Marshal(args)
 	}
 	if err != nil {
 		return err
@@ -191,7 +191,7 @@ func (xc *XClient) XCall(ctx context.Context, servicePath, serviceMethod string,
 		return err
 	}
 	msg := &values.Message{}
-	if err = xc.Binder(ctx, xshare.BinderModRes).Unmarshal(v, msg); err != nil {
+	if err = xc.Binder(ctx, binder.ContentTypeModReq).Unmarshal(v, msg); err != nil {
 		return err
 	}
 	if reply != nil {
@@ -202,7 +202,7 @@ func (xc *XClient) XCall(ctx context.Context, servicePath, serviceMethod string,
 	return err
 }
 
-func (xc *XClient) Binder(ctx context.Context, mod xshare.BinderMod) (r binder.Binder) {
+func (xc *XClient) Binder(ctx context.Context, mod binder.ContentTypeMod) (r binder.Binder) {
 	return xshare.GetBinderFromContext(ctx, mod)
 }
 
@@ -229,7 +229,7 @@ func (xc *XClient) Async(ctx context.Context, servicePath, serviceMethod string,
 	if v, ok := args.([]byte); ok {
 		data = v
 	} else {
-		data, err = xc.Binder(ctx, xshare.BinderModReq).Marshal(args)
+		data, err = xc.Binder(ctx, binder.ContentTypeModReq).Marshal(args)
 	}
 	if err != nil {
 		return nil, err

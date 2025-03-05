@@ -1,13 +1,11 @@
 package xshare
 
 import (
-	"github.com/hwcer/cosgo/binder"
 	"github.com/hwcer/cosgo/utils"
 	"strings"
 	"time"
 )
 
-var Binder binder.Binder = binder.Json
 var rpcServerAddress *utils.Address
 
 var Options = &Rpcx{
