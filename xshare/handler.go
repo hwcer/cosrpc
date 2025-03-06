@@ -101,7 +101,10 @@ func (this *Handler) Caller(node *registry.Node, c *Context) (reply interface{},
 	}
 	return
 }
-func (this *Handler) Marshal(c *Context, reply interface{}) (data []byte, err error) {
+func (this *Handler) Marshal(c *Context, reply any) (data []byte, err error) {
+	if reply == nil {
+		return
+	}
 	if this.serialize != nil {
 		return this.serialize(c, reply)
 	}
@@ -111,7 +114,7 @@ func (this *Handler) Marshal(c *Context, reply interface{}) (data []byte, err er
 	case *[]byte:
 		data = *v
 	default:
-		data, err = c.Binder(binder.ContentTypeModReq).Marshal(values.Parse(reply))
+		data, err = c.Binder(binder.ContentTypeModRes).Marshal(values.Parse(reply))
 	}
 	return
 }
