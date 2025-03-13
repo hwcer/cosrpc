@@ -237,6 +237,7 @@ func (xc *XClient) Async(ctx context.Context, servicePath, serviceMethod string,
 	if err != nil {
 		return nil, err
 	}
+	serviceMethod = registry.Join(serviceMethod)
 	return c.Go(ctx, serviceMethod, data, nil, nil)
 }
 
