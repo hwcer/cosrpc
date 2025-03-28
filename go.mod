@@ -4,10 +4,8 @@ go 1.23.0
 
 toolchain go1.23.4
 
-replace github.com/hwcer/cosgo v1.1.0 => ../cosgo
-
 require (
-	github.com/hwcer/cosgo v1.1.0
+	github.com/hwcer/cosgo v0.0.0-20250327092041-fbd355218a28
 	github.com/rcrowley/go-metrics v0.0.0-20201227073835-cf1acfcdf475
 	github.com/rpcxio/libkv v0.5.1
 	github.com/smallnest/rpcx v1.9.0
