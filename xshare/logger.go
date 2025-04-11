@@ -2,7 +2,7 @@ package xshare
 
 import (
 	"fmt"
-	"github.com/hwcer/cosgo/logger"
+	"github.com/hwcer/logger"
 	"github.com/smallnest/rpcx/log"
 )
 

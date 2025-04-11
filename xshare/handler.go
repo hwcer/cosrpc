@@ -2,9 +2,9 @@ package xshare
 
 import (
 	"github.com/hwcer/cosgo/binder"
-	"github.com/hwcer/cosgo/logger"
 	"github.com/hwcer/cosgo/registry"
 	"github.com/hwcer/cosgo/values"
+	"github.com/hwcer/logger"
 	"reflect"
 	"strings"
 )

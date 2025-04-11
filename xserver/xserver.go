@@ -2,10 +2,10 @@ package xserver
 
 import (
 	"errors"
-	"github.com/hwcer/cosgo/logger"
 	"github.com/hwcer/cosgo/registry"
 	"github.com/hwcer/cosgo/scc"
 	"github.com/hwcer/cosrpc/xshare"
+	"github.com/hwcer/logger"
 	"github.com/smallnest/rpcx/server"
 	"runtime/debug"
 	"sync/atomic"
