@@ -62,7 +62,7 @@ func (this *Context) Error(err any) *values.Message {
 	return values.Errorf(0, err)
 }
 
-func (this *Context) Errorf(code int, format any, args ...interface{}) *values.Message {
+func (this *Context) Errorf(code int32, format any, args ...interface{}) *values.Message {
 	return values.Errorf(code, format, args...)
 }
 
