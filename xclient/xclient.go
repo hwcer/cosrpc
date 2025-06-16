@@ -193,7 +193,7 @@ func (xc *XClient) XCall(ctx context.Context, servicePath, serviceMethod string,
 	if len(v) == 0 {
 		return nil
 	}
-	msg := &values.Message{}
+	msg := &values.Request{}
 	if err = xc.Binder(ctx, binder.ContentTypeModReq).Unmarshal(v, msg); err != nil {
 		return err
 	}
