@@ -99,17 +99,25 @@ func (xc *XClient) Has(servicePath string) bool {
 	return xc.clients.has(servicePath)
 }
 
+func (xc *XClient) Get(servicePath string) client.XClient {
+	c, err := xc.Client(servicePath)
+	if err != nil {
+		logger.Error(err)
+		return nil
+	}
+	return c
+}
 func (xc *XClient) Size() int {
 	return len(xc.clients)
 }
 
-func (xc *XClient) Client(servicePath string) client.XClient {
-	if r := xc.clients.get(servicePath); r != nil {
-		return r.client
-	} else {
-		return nil
+func (xc *XClient) Client(servicePath string) (c client.XClient, err error) {
+	if cs := xc.clients.get(servicePath); cs != nil {
+		c = cs.client
+	} else if cs, err = xc.load(servicePath, xshare.SelectorTypeDiscovery); err == nil {
+		c = cs.client
 	}
-
+	return
 }
 
 func (xc *XClient) WithTimeout(req, res map[string]string) (context.Context, context.CancelFunc) {
@@ -123,9 +131,11 @@ func (xc *XClient) WithTimeout(req, res map[string]string) (context.Context, con
 	return ctx, cancel
 }
 
-func (xc *XClient) Call(ctx context.Context, servicePath, serviceMethod string, args, reply any) (err error) {
-	c := xc.Client(servicePath)
-	if c == nil {
+func (xc *XClient) Call(ctx context.Context, servicePath, serviceMethod string, args, reply any) error {
+	c, err := xc.Client(servicePath)
+	if err != nil {
+		return err
+	} else if c == nil {
 		return fmt.Errorf("can not found any server:%v", servicePath)
 	}
 	if ctx == nil {
@@ -137,9 +147,11 @@ func (xc *XClient) Call(ctx context.Context, servicePath, serviceMethod string, 
 	return c.Call(ctx, serviceMethod, args, reply)
 }
 
-func (xc *XClient) Broadcast(ctx context.Context, servicePath, serviceMethod string, args, reply any) (err error) {
-	c := xc.Client(servicePath)
-	if c == nil {
+func (xc *XClient) Broadcast(ctx context.Context, servicePath, serviceMethod string, args, reply any) error {
+	c, err := xc.Client(servicePath)
+	if err != nil {
+		return err
+	} else if c == nil {
 		return fmt.Errorf("can not found any server:%v", servicePath)
 	}
 	if ctx == nil {
@@ -157,7 +169,7 @@ func (xc *XClient) Broadcast(ctx context.Context, servicePath, serviceMethod str
 	if err = c.Broadcast(ctx, serviceMethod, data, reply); err != nil {
 		logger.Debug("Broadcast error:%v", err)
 	}
-	return
+	return nil
 }
 
 // XCall 使用默认的message发起请求
@@ -219,8 +231,10 @@ func (xc *XClient) Async(ctx context.Context, servicePath, serviceMethod string,
 			logger.Debug("cosrpc Async err:%v\n%v", err, string(debug.Stack()))
 		}
 	}()
-	c := xc.Client(servicePath)
-	if c == nil {
+	var c client.XClient
+	if c, err = xc.Client(servicePath); err != nil {
+		return nil, err
+	} else if c == nil {
 		return nil, fmt.Errorf("can not found any server:%v", servicePath)
 	}
 	if ctx == nil {
@@ -264,6 +278,31 @@ func (xc *XClient) start() (err error) {
 	return
 }
 
+// load 在运行时创建
+func (xc *XClient) load(name string, selector any) (c *Client, err error) {
+	xc.mutex.Lock()
+	defer xc.mutex.Unlock()
+	if c = xc.clients[name]; c != nil {
+		return c, nil
+	}
+	cs := clients{}
+	cs.copy(xc.clients)
+	var s any
+	switch v := selector.(type) {
+	case string:
+		s = xc.selector(name, v)
+	default:
+		s = selector
+	}
+	if c, err = xc.addServicePath(name, s); err == nil {
+		cs[c.ServicePath] = c
+	} else {
+		return
+	}
+	xc.clients = cs
+	return
+}
+
 func (xc *XClient) reload() (err error) {
 	cs := clients{}
 	cs.copy(xc.clients)
@@ -286,7 +325,7 @@ func (xc *XClient) reload() (err error) {
 func (xc *XClient) selector(k, v string) (r any) {
 	if s := strings.ToLower(v); s == xshare.SelectorTypeDiscovery {
 		if r = xshare.Selector.Get(k); r == nil {
-			r = client.RandomSelect
+			r = selectorDefault
 		}
 	} else if s == xshare.SelectorTypeLocal {
 		r = xshare.Address().String()

@@ -3,9 +3,23 @@ package xclient
 import (
 	"context"
 	"github.com/hwcer/cosrpc/xshare"
+	"github.com/hwcer/logger"
 	"github.com/smallnest/rpcx/client"
+	"reflect"
 	"time"
 )
+
+// selectorDefault 默认选择器
+var selectorDefault any = client.RandomSelect
+
+func SetSelector(s any) {
+	switch s.(type) {
+	case client.Selector, client.SelectMode:
+		selectorDefault = s
+	default:
+		logger.Error("selector type error:%v", reflect.TypeOf(s).Kind())
+	}
+}
 
 var Default = New()
 
