@@ -31,8 +31,14 @@ type Context struct {
 	body values.Values
 }
 
-func (this *Context) Binder(mod binder.ContentTypeMod) binder.Binder {
-	return binder.GetContentType(this.Metadata(), mod)
+func (this *Context) Binder(mod ...binder.ContentTypeMod) binder.Binder {
+	var t binder.ContentTypeMod
+	if len(mod) > 0 {
+		t = mod[0]
+	} else {
+		t = binder.ContentTypeModReq
+	}
+	return binder.GetContentType(this.Metadata(), t)
 }
 
 // Reader 返回一个io.Reader来读取包体
