@@ -1,4 +1,4 @@
-package xshare
+package cosrpc
 
 import (
 	"bytes"
@@ -12,7 +12,7 @@ import (
 	"net"
 )
 
-type XContext interface {
+type ICtx interface {
 	Get(key any) any
 	SetValue(key, val any)
 	Payload() []byte
@@ -22,12 +22,12 @@ type XContext interface {
 	Write(reply any) error
 }
 
-func NewContext(ctx XContext) *Context {
+func NewContext(ctx ICtx) *Context {
 	return &Context{ctx: ctx}
 }
 
 type Context struct {
-	ctx  XContext
+	ctx  ICtx
 	body values.Values
 }
 

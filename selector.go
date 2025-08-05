@@ -1,4 +1,4 @@
-package xshare
+package cosrpc
 
 var Selector = selector{} //预设选择器
 

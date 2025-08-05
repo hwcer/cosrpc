@@ -5,8 +5,8 @@ go 1.23.0
 toolchain go1.23.4
 
 require (
-	github.com/hwcer/cosgo v1.4.0
-	github.com/hwcer/logger v0.1.0
+	github.com/hwcer/cosgo v0.0.0-20250805074455-fca4a0a2aa10
+	github.com/hwcer/logger v0.0.0-20250804090620-c5ed3d300dab
 )
 
 require (
@@ -55,13 +55,13 @@ require (
 	github.com/rpcxio/libkv v0.5.1
 	github.com/rs/cors v1.11.1 // indirect
 	github.com/rubyist/circuitbreaker v2.2.1+incompatible // indirect
-	github.com/sagikazarmark/locafero v0.9.0 // indirect
+	github.com/sagikazarmark/locafero v0.10.0 // indirect
 	github.com/shirou/gopsutil v3.21.11+incompatible // indirect
 	github.com/smallnest/quick v0.2.0 // indirect
 	github.com/smallnest/rpcx v1.9.1
 	github.com/smallnest/rsocket v0.0.0-20241130031020-4a72eb6ff62a // indirect
 	github.com/soheilhy/cmux v0.1.5 // indirect
-	github.com/sourcegraph/conc v0.3.0 // indirect
+	github.com/sourcegraph/conc v0.3.1-0.20240121214520-5f936abd7ae8 // indirect
 	github.com/spf13/afero v1.14.0 // indirect
 	github.com/spf13/cast v1.9.2 // indirect
 	github.com/spf13/pflag v1.0.7 // indirect

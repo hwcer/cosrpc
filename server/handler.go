@@ -1,22 +1,23 @@
-package xshare
+package server
 
 import (
 	"github.com/hwcer/cosgo/binder"
 	"github.com/hwcer/cosgo/registry"
 	"github.com/hwcer/cosgo/values"
+	"github.com/hwcer/cosrpc"
 	"github.com/hwcer/logger"
 	"reflect"
 	"strings"
 )
 
 type HandlerFilter func(node *registry.Node) bool
-type HandlerCaller func(node *registry.Node, c *Context) (interface{}, error)
+type HandlerCaller func(node *registry.Node, c *cosrpc.Context) (interface{}, error)
 type HandlerMetadata func() string
-type HandlerMiddleware func(*Context) error
-type HandlerSerialize func(c *Context, reply interface{}) ([]byte, error)
+type HandlerMiddleware func(*cosrpc.Context) error
+type HandlerSerialize func(c *cosrpc.Context, reply interface{}) ([]byte, error)
 
 type handleCaller interface {
-	Caller(node *registry.Node, c *Context) interface{}
+	Caller(node *registry.Node, c *cosrpc.Context) interface{}
 }
 
 type Handler struct {
@@ -50,7 +51,7 @@ func (this *Handler) Filter(node *registry.Node) bool {
 		return this.filter(node)
 	}
 	if node.IsFunc() {
-		_, ok := node.Method().(func(*Context) interface{})
+		_, ok := node.Method().(func(*cosrpc.Context) interface{})
 		return ok
 	} else if node.IsMethod() {
 		t := node.Value().Type()
@@ -75,7 +76,7 @@ func (this *Handler) Metadata() string {
 	return strings.Join(arr, "&")
 }
 
-func (this *Handler) Caller(node *registry.Node, c *Context) (reply interface{}, err error) {
+func (this *Handler) Caller(node *registry.Node, c *cosrpc.Context) (reply interface{}, err error) {
 	defer func() {
 		if e := recover(); e != nil {
 			err = values.Errorf(500, "server recover error")
@@ -91,7 +92,7 @@ func (this *Handler) Caller(node *registry.Node, c *Context) (reply interface{},
 		return this.caller(node, c)
 	}
 	if node.IsFunc() {
-		m := node.Method().(func(*Context) interface{})
+		m := node.Method().(func(*cosrpc.Context) interface{})
 		reply = m(c)
 	} else if s, ok := node.Binder().(handleCaller); ok {
 		reply = s.Caller(node, c)
@@ -101,7 +102,7 @@ func (this *Handler) Caller(node *registry.Node, c *Context) (reply interface{},
 	}
 	return
 }
-func (this *Handler) Marshal(c *Context, reply any) (data []byte, err error) {
+func (this *Handler) Marshal(c *cosrpc.Context, reply any) (data []byte, err error) {
 	if reply == nil {
 		return
 	}

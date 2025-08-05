@@ -1,16 +1,21 @@
-package xclient
+package client
 
 import (
 	"context"
-	"github.com/hwcer/cosrpc/xshare"
+	"github.com/hwcer/cosrpc"
 	"github.com/hwcer/logger"
 	"github.com/smallnest/rpcx/client"
 	"reflect"
 	"time"
 )
 
+type Caller = client.Call
+
+type discovery func(ServicePath string) (client.ServiceDiscovery, error)
+
 // selectorDefault 默认选择器
 var selectorDefault any = client.RandomSelect
+var discoveryDefault discovery
 
 func SetSelector(s any) {
 	switch s.(type) {
@@ -21,35 +26,33 @@ func SetSelector(s any) {
 	}
 }
 
-var Default = New()
+func SetDiscovery(d discovery) {
+	discoveryDefault = d
+}
 
-func ping(c *xshare.Context) interface{} {
+func ping(c *cosrpc.Context) interface{} {
 	return time.Now().Unix()
 }
 
 func Call(ctx context.Context, servicePath, serviceMethod string, args, reply any) (err error) {
-	return Default.Call(ctx, servicePath, serviceMethod, args, reply)
+	return Manage.Call(ctx, servicePath, serviceMethod, args, reply)
 }
 func XCall(ctx context.Context, servicePath, serviceMethod string, args, reply any) (err error) {
-	return Default.XCall(ctx, servicePath, serviceMethod, args, reply)
+	return Manage.XCall(ctx, servicePath, serviceMethod, args, reply)
 }
 
 // Async 异步调用,仅仅调用无返回值
-func Async(ctx context.Context, servicePath, serviceMethod string, args any) (call *client.Call, err error) {
-	return Default.Async(ctx, servicePath, serviceMethod, args)
+func Async(ctx context.Context, servicePath, serviceMethod string, args any) (call *Caller, err error) {
+	return Manage.Async(ctx, servicePath, serviceMethod, args)
 }
 
 // CallWithMetadata 自定义metadata
 func CallWithMetadata(req, res map[string]string, servicePath, serviceMethod string, args, reply any) (err error) {
-	return Default.CallWithMetadata(req, res, servicePath, serviceMethod, args, reply)
+	return Manage.CallWithMetadata(req, res, servicePath, serviceMethod, args, reply)
 }
 func Broadcast(ctx context.Context, servicePath, serviceMethod string, args, reply any) (err error) {
-	return Default.Broadcast(ctx, servicePath, serviceMethod, args, reply)
+	return Manage.Broadcast(ctx, servicePath, serviceMethod, args, reply)
 }
 func WithTimeout(req, res map[string]string) (context.Context, context.CancelFunc) {
-	return Default.WithTimeout(req, res)
-}
-
-func Start(discovery Discovery) (err error) {
-	return Default.Start(discovery)
+	return Manage.WithTimeout(req, res)
 }

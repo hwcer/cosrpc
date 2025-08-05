@@ -5,8 +5,8 @@ import (
 	"context"
 	"errors"
 	"github.com/hwcer/cosgo/binder"
-	"github.com/hwcer/cosrpc/xserver"
-	"github.com/hwcer/cosrpc/xshare"
+	"github.com/hwcer/cosrpc"
+	"github.com/hwcer/cosrpc/server"
 	"github.com/smallnest/rpcx/client"
 	"github.com/smallnest/rpcx/protocol"
 	"github.com/smallnest/rpcx/share"
@@ -38,14 +38,14 @@ func (c *Client) Go(ctx context.Context, serviceMethod string, args interface{},
 	return nil, nil
 }
 func (c *Client) Binder(ctx context.Context, mod binder.ContentTypeMod) (r binder.Binder) {
-	return xshare.GetBinderFromContext(ctx, mod)
+	return cosrpc.GetBinderFromContext(ctx, mod)
 }
 
-func (c *Client) Call(ctx context.Context, serviceMethod string, args interface{}, reply interface{}) (err error) {
+func (c *Client) Call(ctx context.Context, serviceMethod string, args any, reply any) (err error) {
 	if reply != nil && reflect.TypeOf(reply).Kind() != reflect.Ptr {
 		return errors.New("client.call reply must pointer")
 	}
-	node, ok := xserver.Default.Registry.Match(c.servicePath, serviceMethod)
+	node, ok := server.Default.Registry.Match(c.servicePath, serviceMethod)
 	if !ok {
 		return errors.New("services not found: " + serviceMethod)
 	}
@@ -71,7 +71,7 @@ func (c *Client) Call(ctx context.Context, serviceMethod string, args interface{
 		sc.meta[share.ResMetaDataKey] = make(map[string]string)
 	}
 
-	if err = xserver.Default.Caller(sc, node); err != nil {
+	if err = server.Default.Caller(sc, node); err != nil {
 		return err
 	}
 	if reply == nil {
@@ -104,7 +104,6 @@ func (c *Client) SendRaw(ctx context.Context, r *protocol.Message) (map[string]s
 	return nil, nil, nil
 }
 func (c *Client) SendFile(ctx context.Context, fileName string, rateInBytesPerSecond int64, meta map[string]string) error {
-
 	return nil
 }
 func (c *Client) DownloadFile(ctx context.Context, requestFileName string, saveTo io.Writer, meta map[string]string) error {
@@ -113,6 +112,7 @@ func (c *Client) DownloadFile(ctx context.Context, requestFileName string, saveT
 func (c *Client) Stream(ctx context.Context, meta map[string]string) (net.Conn, error) {
 	return nil, nil
 }
+
 func (c *Client) Close() error {
 	return nil
 }

@@ -1,4 +1,4 @@
-package xshare
+package cosrpc
 
 const (
 	SelectorTypeLocal     = "local"     //本地程序内访问

@@ -3,12 +3,21 @@ package inprocess
 import (
 	"bytes"
 	"fmt"
-	"github.com/hwcer/cosgo/values"
 	"github.com/smallnest/rpcx/share"
 )
 
+//type cxt interface {
+//	Get(key any) any
+//	SetValue(key, val any)
+//	Payload() []byte
+//	Metadata() map[string]string
+//	ServicePath() string
+//	ServiceMethod() string
+//	Write(reply any) error
+//}
+
+// /
 type Context struct {
-	//conn net.Conn
 	req   *Request
 	meta  map[any]any
 	reply bytes.Buffer
@@ -91,9 +100,4 @@ func (ctx *Context) Write(v interface{}) (err error) {
 		_, err = ctx.reply.Write(b)
 	}
 	return
-}
-
-func (ctx *Context) WriteError(err error) error {
-	v := values.Parse(err)
-	return ctx.Write(v)
 }

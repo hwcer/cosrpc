@@ -1,4 +1,4 @@
-package xshare
+package server
 
 var Metadata = metadata{}
 

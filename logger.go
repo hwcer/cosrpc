@@ -1,4 +1,4 @@
-package xshare
+package cosrpc
 
 import (
 	"fmt"

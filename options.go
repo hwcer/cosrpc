@@ -1,4 +1,4 @@
-package xshare
+package cosrpc
 
 import (
 	"github.com/hwcer/cosgo/utils"
@@ -8,7 +8,7 @@ import (
 
 var rpcServerAddress *utils.Address
 
-var Options = &Rpcx{
+var Config = &Options{
 	Timeout:             10,
 	Network:             "tcp",
 	Address:             ":8100",
@@ -17,8 +17,7 @@ var Options = &Rpcx{
 	ClientMessageWorker: 1,
 }
 
-type Rpcx = struct {
-	//Redis               string //服务发现
+type Options = struct {
 	Timeout             int32
 	Network             string
 	Address             string //仅仅启动服务器时需要
@@ -27,27 +26,31 @@ type Rpcx = struct {
 	ClientMessageWorker int //双向通信客户端处理消息协程数量
 }
 
+func SetBasePath(p string) {
+	Config.BasePath = p
+}
+
 func Address() *utils.Address {
 	if rpcServerAddress != nil {
 		return rpcServerAddress
 	}
-	rpcServerAddress = utils.NewAddress(Options.Address)
+	rpcServerAddress = utils.NewAddress(Config.Address)
 	if rpcServerAddress.Retry == 0 {
 		rpcServerAddress.Retry = 100
 	}
 	if rpcServerAddress.Host == "" {
 		rpcServerAddress.Host = "0.0.0.0"
 	}
-	rpcServerAddress.Scheme = Options.Network
+	rpcServerAddress.Scheme = Config.Network
 	return rpcServerAddress
 }
 
 func Timeout() time.Duration {
-	return time.Second * time.Duration(Options.Timeout)
+	return time.Second * time.Duration(Config.Timeout)
 }
 
 func AddressPrefix() string {
-	return Options.Network + "@"
+	return Config.Network + "@"
 }
 
 func AddressFormat(address string) string {
