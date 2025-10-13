@@ -2,14 +2,15 @@ package server
 
 import (
 	"errors"
+	"runtime/debug"
+	"sync/atomic"
+	"time"
+
 	"github.com/hwcer/cosgo/registry"
 	"github.com/hwcer/cosgo/scc"
 	"github.com/hwcer/cosrpc"
 	"github.com/hwcer/logger"
 	"github.com/smallnest/rpcx/server"
-	"runtime/debug"
-	"sync/atomic"
-	"time"
 )
 
 // Caller struct自带的Caller
@@ -26,7 +27,7 @@ type Register interface {
 func New() *Server {
 	r := &Server{}
 	r.Server = server.NewServer()
-	r.Registry = registry.New(nil)
+	r.Registry = registry.New()
 	r.Server.DisableHTTPGateway = true
 	return r
 }
@@ -72,17 +73,18 @@ func (xs *Server) Caller(sc cosrpc.ICtx, node *registry.Node) (err error) {
 }
 
 // Reload 动态加载，热更
-func (xs *Server) Reload(nodes map[string]*registry.Node) error {
-	if err := xs.Registry.Reload(nodes); err != nil {
-		return err
-	}
-	handles := make(map[string]server.Handler)
-	for k, _ := range nodes {
-		handles[k] = xs.handle
-	}
-	xs.Server.UpdateHandler(handles)
-	return nil
-}
+
+//	func (xs *Server) Reload(nodes map[string]*registry.Node) error {
+//		if err := xs.Registry.Reload(nodes); err != nil {
+//			return err
+//		}
+//		handles := make(map[string]server.Handler)
+//		for k, _ := range nodes {
+//			handles[k] = xs.handle
+//		}
+//		xs.Server.UpdateHandler(handles)
+//		return nil
+//	}
 func (xs *Server) Service(name string, handler ...interface{}) *registry.Service {
 	service := xs.Registry.Service(name)
 	if service.Handler == nil {

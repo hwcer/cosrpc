@@ -16,9 +16,9 @@ func Service(name string, handler ...interface{}) *registry.Service {
 	return Default.Service(name, handler...)
 }
 
-func Reload(nodes map[string]*registry.Node) error {
-	return Default.Reload(nodes)
-}
+//func Reload(nodes map[string]*registry.Node) error {
+//	return Default.Reload(nodes)
+//}
 
 // GetRegistry 获取API注册器
 func GetRegistry() *registry.Registry {
