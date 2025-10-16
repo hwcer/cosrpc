@@ -1,13 +1,14 @@
 package server
 
 import (
+	"reflect"
+	"strings"
+
 	"github.com/hwcer/cosgo/binder"
 	"github.com/hwcer/cosgo/registry"
 	"github.com/hwcer/cosgo/values"
 	"github.com/hwcer/cosrpc"
 	"github.com/hwcer/logger"
-	"reflect"
-	"strings"
 )
 
 type HandlerFilter func(node *registry.Node) bool

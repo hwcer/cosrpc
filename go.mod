@@ -2,8 +2,10 @@ module github.com/hwcer/cosrpc
 
 go 1.24.0
 
+replace github.com/hwcer/cosgo v1.5.10 => ../cosgo
+
 require (
-	github.com/hwcer/cosgo v1.5.8
+	github.com/hwcer/cosgo v1.5.10
 	github.com/hwcer/logger v0.2.4
 )
 

@@ -3,6 +3,7 @@ package server
 import (
 	"errors"
 	"runtime/debug"
+	"strings"
 	"sync/atomic"
 	"time"
 
@@ -12,6 +13,8 @@ import (
 	"github.com/hwcer/logger"
 	"github.com/smallnest/rpcx/server"
 )
+
+const RegistryMethod = "RPCX"
 
 // Caller struct自带的Caller
 type Caller interface {
@@ -39,13 +42,13 @@ type Server struct {
 	Registry *registry.Registry
 }
 
-func (xs *Server) handle(sc *server.Context) error {
-	node, ok := xs.Registry.Match(sc.ServicePath(), sc.ServiceMethod())
-	if !ok {
-		return errors.New("service not found")
-	}
-	return xs.Caller(sc, node)
-}
+//func (xs *Server) handle(sc *server.Context, node *registry.Node) error {
+//	node, ok := xs.Registry.Match(sc.ServicePath(), sc.ServiceMethod())
+//	if !ok {
+//		return errors.New("service not found")
+//	}
+//	return xs.Caller(sc, node)
+//}
 
 // Caller services入口
 func (xs *Server) Caller(sc cosrpc.ICtx, node *registry.Node) (err error) {
@@ -55,7 +58,7 @@ func (xs *Server) Caller(sc cosrpc.ICtx, node *registry.Node) (err error) {
 		}
 	}()
 
-	handler, ok := node.Service.Handler.(*Handler)
+	handler, ok := node.Handler().(*Handler)
 	if !ok {
 		return errors.New("handler unknown")
 	}
@@ -85,15 +88,12 @@ func (xs *Server) Caller(sc cosrpc.ICtx, node *registry.Node) (err error) {
 //		xs.Server.UpdateHandler(handles)
 //		return nil
 //	}
-func (xs *Server) Service(name string, handler ...interface{}) *registry.Service {
-	service := xs.Registry.Service(name)
-	if service.Handler == nil {
-		service.Handler = &Handler{}
-	}
-	if h, ok := service.Handler.(*Handler); ok {
-		for _, i := range handler {
-			h.Use(i)
-		}
+func (xs *Server) Service(name string, handlers ...any) *registry.Service {
+	handler := &Handler{}
+	service := xs.Registry.Service(name, handler)
+	service.SetMethods([]string{RegistryMethod})
+	for _, i := range handlers {
+		handler.Use(i)
 	}
 	return service
 }
@@ -136,6 +136,13 @@ func (xs *Server) startRegister() (err error) {
 	return
 }
 
+func (xs *Server) parseServiceName(name string) (servicePath string, serviceMethod string) {
+	name = strings.TrimPrefix(name, "/")
+	i := strings.Index(name, "/")
+	servicePath = name[:i]
+	serviceMethod = name[i:]
+	return
+}
 func (xs *Server) Start() (err error) {
 	if xs.Registry.Len() == 0 {
 		return
@@ -146,7 +153,11 @@ func (xs *Server) Start() (err error) {
 	address := cosrpc.Address()
 	//启动服务
 	xs.Registry.Nodes(func(node *registry.Node) (r bool) {
-		xs.Server.AddHandler(node.Service.Name(), node.Name(), xs.handle)
+		servicePath, serviceMethod := xs.parseServiceName(node.Name())
+		var handler = func(c *server.Context) error {
+			return xs.Caller(c, node)
+		}
+		xs.Server.AddHandler(servicePath, serviceMethod, handler)
 		return true
 	})
 
