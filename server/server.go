@@ -22,8 +22,8 @@ type Caller interface {
 }
 
 type Register interface {
-	Start() error
 	Stop() error
+	Start() error
 	Register(name string, rcvr interface{}, metadata string) (err error)
 }
 
@@ -38,17 +38,9 @@ func New() *Server {
 type Server struct {
 	*server.Server
 	started  int32
-	Register Register
+	register Register
 	Registry *registry.Registry
 }
-
-//func (xs *Server) handle(sc *server.Context, node *registry.Node) error {
-//	node, ok := xs.Registry.Match(sc.ServicePath(), sc.ServiceMethod())
-//	if !ok {
-//		return errors.New("service not found")
-//	}
-//	return xs.Caller(sc, node)
-//}
 
 // Caller services入口
 func (xs *Server) Caller(sc cosrpc.ICtx, node *registry.Node) (err error) {
@@ -75,19 +67,6 @@ func (xs *Server) Caller(sc cosrpc.ICtx, node *registry.Node) (err error) {
 	return
 }
 
-// Reload 动态加载，热更
-
-//	func (xs *Server) Reload(nodes map[string]*registry.Node) error {
-//		if err := xs.Registry.Reload(nodes); err != nil {
-//			return err
-//		}
-//		handles := make(map[string]server.Handler)
-//		for k, _ := range nodes {
-//			handles[k] = xs.handle
-//		}
-//		xs.Server.UpdateHandler(handles)
-//		return nil
-//	}
 func (xs *Server) Service(name string, handlers ...any) *registry.Service {
 	handler := &Handler{}
 	service := xs.Registry.Service(name, handler)
@@ -110,14 +89,17 @@ func (xs *Server) startServer(network, address string) (err error) {
 }
 
 func (xs *Server) startRegister() (err error) {
-	if xs.Register == nil {
+	if defaultRegister == nil {
 		logger.Alert("register is nil,Can only run in standalone mode")
 		return nil
+	}
+	if xs.register, err = defaultRegister(); err != nil {
+		return err
 	}
 	//注册服务,实现 rpcxServiceHandlerMetadata 才具有服务发现功能
 	service := map[string]string{}
 	xs.Registry.Range(func(s *registry.Service) bool {
-		name := s.Name()
+		name := strings.TrimPrefix(s.Name(), "/")
 		service[name] = Metadata.Get(name)
 		return true
 	})
@@ -125,11 +107,11 @@ func (xs *Server) startRegister() (err error) {
 		return
 	}
 	for name, meta := range service {
-		if err = xs.Register.Register(name, nil, meta); err != nil {
+		if err = xs.register.Register(name, nil, meta); err != nil {
 			return err
 		}
 	}
-	if err = xs.Register.Start(); err != nil {
+	if err = xs.register.Start(); err != nil {
 		return
 	}
 	xs.Server.Plugins.Add(xs.Registry)
@@ -182,8 +164,8 @@ func (xs *Server) Close() (err error) {
 	if err = xs.Server.Shutdown(nil); err != nil {
 		return
 	}
-	if xs.Register != nil {
-		err = xs.Register.Stop()
+	if xs.register != nil {
+		err = xs.register.Stop()
 	}
 	return
 }
