@@ -16,8 +16,6 @@ import (
 	"github.com/smallnest/rpcx/client"
 )
 
-var basePath string
-
 type Rpcx struct {
 	*cosrpc.Options `json:",inline" mapstructure:",squash"`
 	Redis           string `json:"redis" mapstructure:"redis"`
@@ -25,15 +23,16 @@ type Rpcx struct {
 
 var Options = struct {
 	Rpcx    *Rpcx             `json:"rpcx"`
+	Appid   string            `json:"appid" mapstructure:"appid"`
 	Service map[string]string `json:"service"`
 }{
 	Rpcx:    &Rpcx{Options: cosrpc.Config},
+	Appid:   "cosrpc",
 	Service: cosrpc.Service,
 }
 
 // Start 使用 redis 作为服务器发现 启动RPC功能
-func Start(appid string) (err error) {
-	basePath = appid
+func Start() (err error) {
 	if err = cosgo.Config.Unmarshal(&Options); err != nil {
 		return
 	}
@@ -57,7 +56,7 @@ func GetDiscovery(servicePath string) (client.ServiceDiscovery, error) {
 		return nil, err
 	}
 	var discovery *Discovery
-	discovery, err = NewDiscovery(basePath, servicePath, address, opt)
+	discovery, err = NewDiscovery(Options.Appid, servicePath, address, opt)
 	if err != nil {
 		return nil, err
 	}
@@ -80,7 +79,7 @@ func GetRegister() (xserver.Register, error) {
 	rpcxRegister := &Register{
 		ServiceAddress: fmt.Sprintf("%v%v:%v", cosrpc.AddressPrefix(), host, rpcxAddr.Port),
 		RedisServers:   address,
-		BasePath:       basePath,
+		BasePath:       Options.Appid,
 		Options:        opt,
 		UpdateInterval: time.Second,
 	}
