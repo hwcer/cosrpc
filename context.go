@@ -82,10 +82,7 @@ func (this *Context) Conn() net.Conn {
 
 // Error 创建一个错误消息
 func (this *Context) Error(err any) *values.Message {
-	if e, ok := err.(error); ok {
-		return Error(e)
-	}
-	return values.Errorf(ErrCodeUnknown, err)
+	return values.Error(err)
 }
 
 // Errorf 创建一个带错误码的错误消息
