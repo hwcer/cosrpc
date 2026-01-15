@@ -146,8 +146,8 @@ func (d *Discovery) watch() {
 				} else {
 					tempDelay *= 2
 				}
-				if max := 30 * time.Second; tempDelay > max {
-					tempDelay = max
+				if n := 30 * time.Second; tempDelay > n {
+					tempDelay = n
 				}
 				log.Warnf("can not watchtree (with retry %d, sleep %v): %s: %v", retry, tempDelay, d.basePath, err)
 				time.Sleep(tempDelay)
