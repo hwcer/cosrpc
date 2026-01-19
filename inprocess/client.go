@@ -46,8 +46,8 @@ func (c *Client) Call(ctx context.Context, serviceMethod string, args any, reply
 	if reply != nil && reflect.TypeOf(reply).Kind() != reflect.Ptr {
 		return errors.New("client.call reply must pointer")
 	}
-	node, ok := server.Default.Registry.Match(c.servicePath, serviceMethod)
-	if !ok {
+	node, _ := server.Default.Registry.Search(server.RegistryMethod, c.servicePath, serviceMethod)
+	if node == nil {
 		return errors.New("services not found: " + serviceMethod)
 	}
 
