@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"net/url"
+	"sync/atomic"
 	"time"
 
 	"github.com/hwcer/cosgo"
@@ -15,6 +16,8 @@ import (
 	"github.com/rpcxio/libkv/store"
 	"github.com/smallnest/rpcx/client"
 )
+
+var started atomic.Bool
 
 type Rpcx struct {
 	*cosrpc.Options `json:",inline" mapstructure:",squash"`
@@ -33,6 +36,9 @@ var Options = struct {
 
 // Start 使用 redis 作为服务器发现 启动RPC功能
 func Start() (err error) {
+	if !started.CompareAndSwap(false, true) {
+		return nil
+	}
 	if err = cosgo.Config.Unmarshal(&Options); err != nil {
 		return
 	}
@@ -47,7 +53,7 @@ func Start() (err error) {
 		xclient.SetDiscovery(GetDiscovery)
 	}
 
-	return nil
+	return
 }
 
 func GetDiscovery(servicePath string) (client.ServiceDiscovery, error) {
