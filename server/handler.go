@@ -40,11 +40,11 @@ type handleCaller interface {
 // Handler 是 cosrpc 服务器的处理器
 // 支持多种处理器类型，如调用器、过滤器、元数据、中间件和序列化器
 type Handler struct {
-	caller     HandlerCaller     // 服务调用器
-	filter     HandlerFilter     // 服务过滤器
-	metadata   []HandlerMetadata // 服务元数据提供者
+	caller     HandlerCaller       // 服务调用器
+	filter     HandlerFilter       // 服务过滤器
+	metadata   []HandlerMetadata   // 服务元数据提供者
 	middleware []HandlerMiddleware // 服务中间件
-	serialize  HandlerSerialize  // 服务序列化器
+	serialize  HandlerSerialize    // 服务序列化器
 }
 
 // Use 应用一个处理器
@@ -149,7 +149,7 @@ func (this *Handler) Marshal(c *cosrpc.Context, reply any) (data []byte, err err
 	case *[]byte:
 		data = *v
 	default:
-		data, err = c.Binder(binder.ContentTypeModRes).Marshal(values.Parse(reply))
+		data, err = c.Binder(binder.HeaderAccept, binder.HeaderContentType).Marshal(values.Parse(reply))
 	}
 	return
 }

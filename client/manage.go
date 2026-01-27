@@ -4,6 +4,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"reflect"
+	"runtime/debug"
+	"strings"
+	"sync"
+
 	"github.com/hwcer/cosgo"
 	"github.com/hwcer/cosgo/binder"
 	"github.com/hwcer/cosgo/registry"
@@ -14,10 +19,6 @@ import (
 	"github.com/smallnest/rpcx/client"
 	"github.com/smallnest/rpcx/protocol"
 	"github.com/smallnest/rpcx/share"
-	"reflect"
-	"runtime/debug"
-	"strings"
-	"sync"
 )
 
 var Manage = clients{}
@@ -146,7 +147,7 @@ func (xc *clients) Broadcast(ctx context.Context, servicePath, serviceMethod str
 	if v, ok := args.([]byte); ok {
 		data = v
 	} else {
-		data, err = xc.Binder(ctx, binder.ContentTypeModReq).Marshal(args)
+		data, err = xc.Binder(ctx).Marshal(args)
 	}
 	if err != nil {
 		return
@@ -171,7 +172,7 @@ func (xc *clients) XCall(ctx context.Context, servicePath, serviceMethod string,
 	if v, ok := args.([]byte); ok {
 		data = v
 	} else {
-		data, err = xc.Binder(ctx, binder.ContentTypeModReq).Marshal(args)
+		data, err = xc.Binder(ctx).Marshal(args)
 	}
 	if err != nil {
 		return err
@@ -191,7 +192,7 @@ func (xc *clients) XCall(ctx context.Context, servicePath, serviceMethod string,
 		return nil
 	}
 	msg := &values.Request{}
-	if err = xc.Binder(ctx, binder.ContentTypeModReq).Unmarshal(v, msg); err != nil {
+	if err = xc.Binder(ctx, binder.HeaderAccept, binder.HeaderContentType).Unmarshal(v, msg); err != nil {
 		return err
 	}
 	if reply != nil {
@@ -202,8 +203,8 @@ func (xc *clients) XCall(ctx context.Context, servicePath, serviceMethod string,
 	return err
 }
 
-func (xc *clients) Binder(ctx context.Context, mod binder.ContentTypeMod) (r binder.Binder) {
-	return cosrpc.GetBinderFromContext(ctx, mod)
+func (xc *clients) Binder(ctx context.Context, cts ...string) (r binder.Binder) {
+	return cosrpc.GetBinderFromContext(ctx, cts...)
 }
 
 // Async 异步
@@ -229,7 +230,7 @@ func (xc *clients) Async(ctx context.Context, servicePath, serviceMethod string,
 	if v, ok := args.([]byte); ok {
 		data = v
 	} else {
-		data, err = xc.Binder(ctx, binder.ContentTypeModReq).Marshal(args)
+		data, err = xc.Binder(ctx).Marshal(args)
 	}
 	if err != nil {
 		return nil, err

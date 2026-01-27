@@ -40,14 +40,10 @@ type Context struct {
 
 // Binder 获取绑定器
 // 根据元数据和内容类型模式获取对应的绑定器
-func (this *Context) Binder(mod ...binder.ContentTypeMod) binder.Binder {
-	var t binder.ContentTypeMod
-	if len(mod) > 0 {
-		t = mod[0]
-	} else {
-		t = binder.ContentTypeModReq
-	}
-	return binder.GetContentType(this.Metadata(), t)
+// contentType   binder.HeaderContentType binder.HeaderAccept
+func (this *Context) Binder(cts ...string) (b binder.Binder) {
+	meta := this.Metadata()
+	return binder.GetBinder(meta, cts...)
 }
 
 // Reader 返回一个 io.Reader 来读取包体
@@ -71,7 +67,7 @@ func (this *Context) Bind(i interface{}) error {
 	if len(data) == 0 {
 		return nil
 	}
-	bind := this.Binder(binder.ContentTypeModReq)
+	bind := this.Binder()
 	return bind.Unmarshal(data, i)
 }
 
