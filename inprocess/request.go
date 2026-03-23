@@ -6,7 +6,7 @@ type Request struct {
 	st            protocol.SerializeType
 	ServicePath   string
 	ServiceMethod string
-	Payload       []byte
+	Payload       any
 }
 
 // SerializeType returns serialization type of payload.

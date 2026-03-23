@@ -1,26 +1,15 @@
 package inprocess
 
 import (
-	"bytes"
-	"fmt"
+	"github.com/hwcer/logger"
 	"github.com/smallnest/rpcx/share"
 )
-
-//type cxt interface {
-//	Get(key any) any
-//	SetValue(key, val any)
-//	Payload() []byte
-//	Metadata() map[string]string
-//	ServicePath() string
-//	ServiceMethod() string
-//	Write(reply any) error
-//}
 
 // /
 type Context struct {
 	req   *Request
 	meta  map[any]any
-	reply bytes.Buffer
+	reply any
 }
 
 // Get returns value for key.
@@ -46,7 +35,8 @@ func (ctx *Context) DeleteKey(key interface{}) {
 
 // Payload returns the  payload.
 func (ctx *Context) Payload() []byte {
-	return ctx.req.Payload
+	logger.Alert("Payload is nil in inprocess mode")
+	return nil // inprocess 模式下，payload 为空
 }
 
 // Metadata returns the metadata.
@@ -76,28 +66,12 @@ func (ctx *Context) ServiceMethod() string {
 func (ctx *Context) Bind(v interface{}) error {
 	req := ctx.req
 	if v != nil {
-		codec := share.Codecs[req.SerializeType()]
-		if codec == nil {
-			return fmt.Errorf("can not find codec for %d", req.SerializeType())
-		}
-
-		err := codec.Decode(req.Payload, v)
-		if err != nil {
-			return err
-		}
+		return Unmarshal(req.Payload, v)
 	}
 	return nil
 }
 
 func (ctx *Context) Write(v interface{}) (err error) {
-	req := ctx.req
-	codec := share.Codecs[req.SerializeType()]
-	if codec == nil {
-		return fmt.Errorf("can not find codec for %d", req.SerializeType())
-	}
-	var b []byte
-	if b, err = codec.Encode(v); err == nil {
-		_, err = ctx.reply.Write(b)
-	}
-	return
+	ctx.reply = v
+	return nil
 }
