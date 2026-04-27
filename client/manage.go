@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"reflect"
-	"runtime/debug"
 	"strings"
 	"sync"
 
@@ -214,7 +213,7 @@ func (xc *clients) Async(ctx context.Context, servicePath, serviceMethod string,
 			err = fmt.Errorf("%v", r)
 		}
 		if err != nil {
-			logger.Debug("cosrpc Async err:%v\n%v", err, string(debug.Stack()))
+			logger.Debug("cosrpc Async err:%v", err)
 		}
 	}()
 	c := xc.Get(servicePath)

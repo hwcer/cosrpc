@@ -2,7 +2,6 @@ package server
 
 import (
 	"errors"
-	"runtime/debug"
 	"strings"
 	"sync/atomic"
 	"time"
@@ -58,7 +57,7 @@ type Server struct {
 func (xs *Server) Caller(sc cosrpc.ICtx, node *registry.Node) (err error) {
 	defer func() {
 		if r := recover(); r != nil {
-			logger.Alert("rpcx server recover error:%v\n%v", r, string(debug.Stack()))
+			logger.Alert("rpcx server recover error:%v", r)
 		}
 	}()
 

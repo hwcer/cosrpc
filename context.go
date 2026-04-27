@@ -71,9 +71,12 @@ func (this *Context) Bind(i interface{}) error {
 	return bind.Unmarshal(data, i)
 }
 
-// Conn 获取网络连接
+// Conn 获取网络连接，in-process 模式或值缺失时返回 nil
 func (this *Context) Conn() net.Conn {
-	return this.GetValue(server.RemoteConnContextKey).(net.Conn)
+	if v, ok := this.GetValue(server.RemoteConnContextKey).(net.Conn); ok {
+		return v
+	}
+	return nil
 }
 
 // Error 创建一个错误消息

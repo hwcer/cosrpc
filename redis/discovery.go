@@ -181,18 +181,12 @@ func (d *Discovery) watch() {
 				pairs = d.setPairs(ps)
 				d.mu.Lock()
 				for _, ch := range d.chans {
-					ch := ch
-					go func() {
-						defer func() {
-							recover()
-						}()
-
-						select {
-						case ch <- pairs:
-						case <-time.After(time.Minute):
-							log.Warn("chan is full and new change has been dropped")
-						}
-					}()
+					// 非阻塞发送，满则丢弃。避免为每个 watcher 起 goroutine + time.After 泄漏 timer
+					select {
+					case ch <- pairs:
+					default:
+						log.Warn("chan is full and new change has been dropped")
+					}
 				}
 				d.mu.Unlock()
 			}
