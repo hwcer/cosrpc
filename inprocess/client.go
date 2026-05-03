@@ -8,6 +8,7 @@ import (
 	"net"
 	"reflect"
 
+	"github.com/hwcer/cosgo/binder"
 	"github.com/hwcer/cosrpc/server"
 	"github.com/smallnest/rpcx/client"
 	"github.com/smallnest/rpcx/protocol"
@@ -47,10 +48,11 @@ func (c *Client) Call(ctx context.Context, serviceMethod string, args any, reply
 	}
 
 	req := &Request{}
+	req.Payload = args
 	req.ServicePath = c.servicePath
 	req.ServiceMethod = serviceMethod
 	sc := &Context{req: req, meta: map[any]any{}}
-	sc.reply = args
+	//sc.reply = args
 	// if req.Payload, err = c.Binder(ctx).Marshal(args); err != nil {
 	// 	return err
 	// }
@@ -97,10 +99,11 @@ func (c *Client) SendRaw(ctx context.Context, r *protocol.Message) (map[string]s
 	}
 
 	req := &Request{}
+	req.Payload = r
 	req.ServicePath = c.servicePath
 	req.ServiceMethod = r.ServiceMethod
 	sc := &Context{req: req, meta: map[any]any{}}
-	sc.reply = r.Payload
+	//sc.reply = r.Payload
 
 	if v := ctx.Value(share.ReqMetaDataKey); v != nil {
 		sc.meta[share.ReqMetaDataKey] = v
@@ -148,9 +151,15 @@ func (c *Client) Close() error {
 
 // Unmarshal 内存模式专用的反序列化方法
 // 类型一致时直接复制，类型不一致时通过 JSON 序列化后反序列化
-func Unmarshal(data any, reply any) error {
+func Unmarshal(data any, reply any, bs ...binder.Binder) (err error) {
 	if reply == nil {
 		return nil
+	}
+	var b binder.Binder
+	if len(bs) > 0 {
+		b = bs[0]
+	} else {
+		b = binder.Json
 	}
 
 	// 检查类型是否一致
@@ -164,9 +173,14 @@ func Unmarshal(data any, reply any) error {
 	}
 
 	// 类型不一致，通过 JSON 序列化后反序列化
-	jsonData, err := json.Marshal(data)
+	var jsonData []byte
+	if v, ok := data.([]byte); ok {
+		jsonData = v
+	} else {
+		jsonData, err = b.Marshal(data)
+	}
 	if err != nil {
 		return err
 	}
-	return json.Unmarshal(jsonData, reply)
+	return b.Unmarshal(jsonData, reply)
 }
