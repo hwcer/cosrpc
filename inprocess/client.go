@@ -48,16 +48,16 @@ func (c *Client) Call(ctx context.Context, serviceMethod string, args any, reply
 	}
 
 	req := &Request{}
-	req.Payload = args
 	req.ServicePath = c.servicePath
 	req.ServiceMethod = serviceMethod
-	sc := &Context{req: req, meta: map[any]any{}}
-	//sc.reply = args
-	// if req.Payload, err = c.Binder(ctx).Marshal(args); err != nil {
-	// 	return err
-	// }
+	if data, ok := args.([]byte); ok {
+		req.Payload = data
+	} else {
+		req.Args = args
+	}
 
-	//sc.reply = bytes.Buffer{}
+	sc := &Context{req: req, meta: map[any]any{}}
+
 	if v := ctx.Value(share.ReqMetaDataKey); v != nil {
 		sc.meta[share.ReqMetaDataKey] = v
 	} else {
@@ -99,11 +99,10 @@ func (c *Client) SendRaw(ctx context.Context, r *protocol.Message) (map[string]s
 	}
 
 	req := &Request{}
-	req.Payload = r
+	req.Args = r
 	req.ServicePath = c.servicePath
 	req.ServiceMethod = r.ServiceMethod
 	sc := &Context{req: req, meta: map[any]any{}}
-	//sc.reply = r.Payload
 
 	if v := ctx.Value(share.ReqMetaDataKey); v != nil {
 		sc.meta[share.ReqMetaDataKey] = v
@@ -149,38 +148,33 @@ func (c *Client) Close() error {
 	return nil
 }
 
-// Unmarshal 内存模式专用的反序列化方法
-// 类型一致时直接复制，类型不一致时通过 JSON 序列化后反序列化
+// Unmarshal 内存模式反序列化
+// 类型可赋值时直接复制，否则通过序列化中转
 func Unmarshal(data any, reply any, bs ...binder.Binder) (err error) {
 	if reply == nil {
 		return nil
 	}
+	dataType := reflect.TypeOf(data)
+	replyType := reflect.TypeOf(reply).Elem()
+	if dataType != nil && dataType.AssignableTo(replyType) {
+		reflect.ValueOf(reply).Elem().Set(reflect.ValueOf(data))
+		return nil
+	}
+
 	var b binder.Binder
 	if len(bs) > 0 {
 		b = bs[0]
 	} else {
 		b = binder.Json
 	}
-
-	// 检查类型是否一致
-	dataType := reflect.TypeOf(data)
-	replyType := reflect.TypeOf(reply).Elem()
-
-	if dataType == replyType {
-		// 类型一致，直接赋值
-		reflect.ValueOf(reply).Elem().Set(reflect.ValueOf(data))
-		return nil
-	}
-
-	// 类型不一致，通过 JSON 序列化后反序列化
-	var jsonData []byte
+	var raw []byte
 	if v, ok := data.([]byte); ok {
-		jsonData = v
+		raw = v
 	} else {
-		jsonData, err = b.Marshal(data)
+		raw, err = b.Marshal(data)
 	}
 	if err != nil {
 		return err
 	}
-	return b.Unmarshal(jsonData, reply)
+	return b.Unmarshal(raw, reply)
 }

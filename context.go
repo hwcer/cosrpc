@@ -13,9 +13,9 @@ import (
 	"github.com/smallnest/rpcx/share"
 )
 
-// ICtx 定义上下文接口
+// IContext 定义上下文接口
 // 用于处理 RPC 请求和响应
-type ICtx interface {
+type IContext interface {
 	Get(key any) any
 	SetValue(key, val any)
 	Payload() []byte
@@ -25,16 +25,21 @@ type ICtx interface {
 	Write(reply any) error
 }
 
+// IContextBinder 支持自定义 Bind 的上下文（如 inprocess 模式）
+type IContextBinder interface {
+	Bind(v any) error
+}
+
 // NewContext 创建并返回一个新的 Context 实例
-// 包装传入的 ICtx 接口
-func NewContext(ctx ICtx) *Context {
+// 包装传入的 IContext 接口
+func NewContext(ctx IContext) *Context {
 	return &Context{ctx: ctx}
 }
 
 // Context 是 cosrpc 上下文的核心结构
-// 封装了 ICtx 接口并提供了便捷的方法
+// 封装了 IContext 接口并提供了便捷的方法
 type Context struct {
-	ctx  ICtx          // 底层的上下文接口
+	ctx  IContext      // 底层的上下文接口
 	body values.Values // 请求体的解析结果
 }
 
@@ -63,6 +68,9 @@ func (this *Context) Write(data []byte) error {
 
 // Bind 绑定请求数据到指定的结构体
 func (this *Context) Bind(i interface{}) error {
+	if b, ok := this.ctx.(IContextBinder); ok {
+		return b.Bind(i)
+	}
 	data := this.ctx.Payload()
 	if len(data) == 0 {
 		return nil

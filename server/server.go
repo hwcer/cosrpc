@@ -54,7 +54,7 @@ type Server struct {
 // 2. 创建 cosrpc Context
 // 3. 调用 Handler.Caller 处理请求
 // 4. 序列化响应并写入客户端
-func (xs *Server) Caller(sc cosrpc.ICtx, node *registry.Node) (err error) {
+func (xs *Server) Caller(sc cosrpc.IContext, node *registry.Node) (err error) {
 	defer func() {
 		if r := recover(); r != nil {
 			logger.Alert("rpcx server recover error:%v", r)

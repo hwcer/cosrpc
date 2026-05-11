@@ -129,7 +129,7 @@ cosrpc/
 │   └── manage.go       客户端池管理 + reload + 动态加载
 ├── inprocess/
 │   ├── client.go       进程内 XClient（直接调用 Registry.Search）
-│   ├── context.go      进程内 ICtx 实现
+│   ├── context.go      进程内 IContext 实现
 │   └── request.go      进程内 Request 模拟
 ├── redis/
 │   ├── init.go         Redis 服务发现/注册初始化

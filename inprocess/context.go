@@ -1,11 +1,10 @@
 package inprocess
 
 import (
-	"github.com/hwcer/logger"
+	"github.com/hwcer/cosgo/binder"
 	"github.com/smallnest/rpcx/share"
 )
 
-// /
 type Context struct {
 	req   *Request
 	meta  map[any]any
@@ -13,12 +12,12 @@ type Context struct {
 }
 
 // Get returns value for key.
-func (ctx *Context) Get(key interface{}) interface{} {
+func (ctx *Context) Get(key any) any {
 	return ctx.meta[key]
 }
 
 // SetValue sets the kv pair.
-func (ctx *Context) SetValue(key, val interface{}) {
+func (ctx *Context) SetValue(key, val any) {
 	if key == nil || val == nil {
 		return
 	}
@@ -26,17 +25,20 @@ func (ctx *Context) SetValue(key, val interface{}) {
 }
 
 // DeleteKey delete the kv pair by key.
-func (ctx *Context) DeleteKey(key interface{}) {
+func (ctx *Context) DeleteKey(key any) {
 	if ctx.meta == nil || key == nil {
 		return
 	}
 	delete(ctx.meta, key)
 }
 
-// Payload returns the  payload.
+// Payload 返回序列化后的二进制数据
+// 优先返回已有的 Payload，否则从 Args 懒序列化并缓存
 func (ctx *Context) Payload() []byte {
-	logger.Alert("Payload is nil in inprocess mode")
-	return nil // inprocess 模式下，payload 为空
+	if ctx.req.Payload == nil && ctx.req.Args != nil {
+		ctx.req.Payload, _ = binder.Json.Marshal(ctx.req.Args)
+	}
+	return ctx.req.Payload
 }
 
 // Metadata returns the metadata.
@@ -62,16 +64,21 @@ func (ctx *Context) ServiceMethod() string {
 	return ctx.req.ServiceMethod
 }
 
-// Bind parses the body data and stores the result to v.
-func (ctx *Context) Bind(v interface{}) error {
-	req := ctx.req
-	if v != nil {
-		return Unmarshal(req.Payload, v)
+// Bind 优先从 Args 直接反序列化，回退到 Payload 字节流
+func (ctx *Context) Bind(v any) error {
+	if v == nil {
+		return nil
+	}
+	if ctx.req.Args != nil {
+		return Unmarshal(ctx.req.Args, v)
+	}
+	if len(ctx.req.Payload) > 0 {
+		return binder.Json.Unmarshal(ctx.req.Payload, v)
 	}
 	return nil
 }
 
-func (ctx *Context) Write(v interface{}) (err error) {
+func (ctx *Context) Write(v any) (err error) {
 	ctx.reply = v
 	return nil
 }
