@@ -26,9 +26,9 @@ type IContext interface {
 }
 
 // IContextBinder 支持自定义 Bind 的上下文（如 inprocess 模式）
-type IContextBinder interface {
-	Bind(v any) error
-}
+//type IContextBinder interface {
+//	Bind(v any) error
+//}
 
 // NewContext 创建并返回一个新的 Context 实例
 // 包装传入的 IContext 接口
@@ -68,9 +68,9 @@ func (this *Context) Write(data []byte) error {
 
 // Bind 绑定请求数据到指定的结构体
 func (this *Context) Bind(i interface{}) error {
-	if b, ok := this.ctx.(IContextBinder); ok {
-		return b.Bind(i)
-	}
+	//if b, ok := this.ctx.(IContextBinder); ok {
+	//	return b.Bind(i)
+	//}
 	data := this.ctx.Payload()
 	if len(data) == 0 {
 		return nil
