@@ -190,7 +190,7 @@ func (xc *clients) XCall(ctx context.Context, servicePath, serviceMethod string,
 	if len(v) == 0 {
 		return nil
 	}
-	msg := &values.Request{}
+	msg := &values.Message{}
 	if err = xc.Binder(ctx, binder.HeaderAccept, binder.HeaderContentType).Unmarshal(v, msg); err != nil {
 		return err
 	}
