@@ -3,11 +3,10 @@ module github.com/hwcer/cosrpc
 go 1.25.0
 
 require (
-	github.com/hwcer/cosgo v1.8.3-0.20260604075126-0f2a31620eb1
-	github.com/hwcer/logger v0.2.8
+	github.com/hwcer/cosgo v1.8.4-0.20260626034135-f355bc098353
+	github.com/hwcer/logger v0.2.9-0.20260626033726-42e0a5927245
+	go.mongodb.org/mongo-driver/v2 v2.7.0 // indirect
 )
-
-require go.mongodb.org/mongo-driver/v2 v2.6.0 // indirect
 
 require (
 	github.com/akutz/memconn v0.1.0 // indirect
