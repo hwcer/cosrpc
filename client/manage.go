@@ -89,7 +89,7 @@ func (xc *clients) Get(servicePath string) (c client.XClient) {
 	} else if cs, err = xc.load(servicePath, cosrpc.SelectorTypeDiscovery); err == nil {
 		c = cs.client
 	} else {
-		logger.Error(err)
+		logger.Warn(err)
 	}
 	return
 }
