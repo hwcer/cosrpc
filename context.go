@@ -138,7 +138,7 @@ func (this *Context) SetValue(key, val any) {
 }
 
 // Metadata 获取元数据
-func (this *Context) Metadata() map[string]string {
+func (this *Context) Metadata() values.Metadata {
 	return this.ctx.Metadata()
 }
 
