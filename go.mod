@@ -3,7 +3,7 @@ module github.com/hwcer/cosrpc
 go 1.26.0
 
 require (
-	github.com/hwcer/cosgo v1.8.4-0.20260626034135-f355bc098353
+	github.com/hwcer/cosgo v1.8.4-0.20260821022652-154e18615e0f
 	github.com/hwcer/logger v0.2.9-0.20260626033726-42e0a5927245
 	go.mongodb.org/mongo-driver/v2 v2.7.0 // indirect
 )
@@ -56,7 +56,6 @@ require (
 	github.com/shirou/gopsutil v3.21.11+incompatible // indirect
 	github.com/smallnest/quick v0.2.0 // indirect
 	github.com/smallnest/rpcx v1.9.4
-	github.com/smallnest/rsocket v0.0.0-20241130031020-4a72eb6ff62a // indirect
 	github.com/soheilhy/cmux v0.1.5 // indirect
 	github.com/spf13/afero v1.15.0 // indirect
 	github.com/spf13/cast v1.10.0 // indirect
@@ -91,3 +90,5 @@ require (
 	google.golang.org/protobuf v1.36.11 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 )
+
+require github.com/smallnest/gordma v0.3.0 // indirect
