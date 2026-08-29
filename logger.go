@@ -15,7 +15,7 @@ type dummyLogger struct {
 }
 
 func (l *dummyLogger) Debug(v ...interface{}) {
-	logger.Debug(fmt.Sprint(v))
+	logger.Debug(fmt.Sprint(v...))
 }
 
 func (l *dummyLogger) Debugf(format string, v ...interface{}) {
@@ -23,7 +23,7 @@ func (l *dummyLogger) Debugf(format string, v ...interface{}) {
 }
 
 func (l *dummyLogger) Info(v ...interface{}) {
-	logger.Trace(fmt.Sprint(v))
+	logger.Trace(fmt.Sprint(v...))
 }
 
 func (l *dummyLogger) Infof(format string, v ...interface{}) {
@@ -31,7 +31,7 @@ func (l *dummyLogger) Infof(format string, v ...interface{}) {
 }
 
 func (l *dummyLogger) Warn(v ...interface{}) {
-	logger.Alert(fmt.Sprint(v))
+	logger.Alert(fmt.Sprint(v...))
 }
 
 func (l *dummyLogger) Warnf(format string, v ...interface{}) {
@@ -39,7 +39,7 @@ func (l *dummyLogger) Warnf(format string, v ...interface{}) {
 }
 
 func (l *dummyLogger) Error(v ...interface{}) {
-	logger.Error(fmt.Sprint(v))
+	logger.Error("%v", fmt.Sprint(v...))
 }
 
 func (l *dummyLogger) Errorf(format string, v ...interface{}) {
@@ -47,7 +47,7 @@ func (l *dummyLogger) Errorf(format string, v ...interface{}) {
 }
 
 func (l *dummyLogger) Fatal(v ...interface{}) {
-	logger.Error(fmt.Sprint(v))
+	logger.Error("%v", fmt.Sprint(v...))
 }
 
 func (l *dummyLogger) Fatalf(format string, v ...interface{}) {
@@ -55,7 +55,7 @@ func (l *dummyLogger) Fatalf(format string, v ...interface{}) {
 }
 
 func (l *dummyLogger) Panic(v ...interface{}) {
-	logger.Error(fmt.Sprint(v))
+	logger.Error("%v", fmt.Sprint(v...))
 }
 
 func (l *dummyLogger) Panicf(format string, v ...interface{}) {
