@@ -1,6 +1,7 @@
 package server
 
 import (
+	"context"
 	"errors"
 	"strings"
 	"sync/atomic"
@@ -195,15 +196,21 @@ func (xs *Server) Start() (err error) {
 // 1. 原子操作检查并设置启动状态
 // 2. 关闭 rpcx Server
 // 3. 停止服务注册
-func (xs *Server) Close() (err error) {
+func (xs *Server) Close() error {
 	if !atomic.CompareAndSwapInt32(&xs.started, 1, 0) {
-		return
+		return nil
 	}
-	if err = xs.Server.Shutdown(nil); err != nil {
-		return
-	}
+	// rpcx 会在仍有在途请求时调用 ctx.Done，不能传 nil。这里使用独立的有界
+	// context，避免复用已经被 cosgo 关闭流程取消的全局 context，也避免坏请求
+	// 让进程永久卡在优雅退出阶段。
+	ctx, cancel := context.WithTimeout(context.Background(), cosrpc.Timeout())
+	defer cancel()
+
+	shutdownErr := xs.Server.Shutdown(ctx)
+	// 即使优雅退出超时，也必须注销服务发现，不能把节点留给 TTL 被动清理。
+	var registerErr error
 	if xs.register != nil {
-		err = xs.register.Stop()
+		registerErr = xs.register.Stop()
 	}
-	return
+	return errors.Join(shutdownErr, registerErr)
 }
