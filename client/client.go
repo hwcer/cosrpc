@@ -15,9 +15,9 @@ import (
 type Client struct {
 	client   client.XClient  // 内嵌的 rpcx XClient
 	Option   client.Option   // 客户端选项
-	started  int32           // 客户端启动状态，0 未启动，1 已启动
+	started  atomic.Int32    // 客户端启动状态，0 未启动，1 已启动
 	FailMode client.FailMode // 失败处理模式
-	Selector interface{}     // 服务选择器，可以是以下类型：
+	Selector any             // 服务选择器，可以是以下类型：
 	// - string: 进程内调用或点对点地址
 	// - []string: 多点地址列表
 	// - client.Selector: 自定义选择器
@@ -30,7 +30,7 @@ type Client struct {
 // 2. 根据 Selector 类型选择不同的服务发现模式
 // 3. 初始化对应的 XClient
 func (this *Client) start() (err error) {
-	if !atomic.CompareAndSwapInt32(&this.started, 0, 1) {
+	if !this.started.CompareAndSwap(0, 1) {
 		return fmt.Errorf("client started:%v", this.ServicePath)
 	}
 	switch v := this.Selector.(type) {

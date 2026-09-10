@@ -14,7 +14,7 @@ func init() {
 
 var defaultRegister func() (Register, error)
 
-func Service(name string, handler ...interface{}) *registry.Service {
+func Service(name string, handler ...any) *registry.Service {
 	return Default.Service(name, handler...)
 }
 

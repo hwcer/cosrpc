@@ -20,7 +20,7 @@ const RegistryMethod = "RPCX"
 // Caller 定义服务调用接口
 // 用于处理 RPC 请求并返回结果
 type Caller interface {
-	Caller(c *cosrpc.Context, node *registry.Node) interface{}
+	Caller(c *cosrpc.Context, node *registry.Node) any
 }
 
 // Register 定义服务注册接口
@@ -28,7 +28,7 @@ type Caller interface {
 type Register interface {
 	Stop() error
 	Start() error
-	Register(name string, rcvr interface{}, metadata string) (err error)
+	Register(name string, rcvr any, metadata string) (err error)
 }
 
 // New 创建并返回一个新的 Server 实例
@@ -45,7 +45,7 @@ func New() *Server {
 // 封装了 rpcx Server 并提供了服务注册和管理功能
 type Server struct {
 	*server.Server                    // 内嵌的 rpcx Server
-	started        int32              // 服务器启动状态，0 未启动，1 已启动
+	started        atomic.Int32       // 服务器启动状态，0 未启动，1 已启动
 	register       Register           // 服务注册器
 	Registry       *registry.Registry // 服务注册表
 }
@@ -101,7 +101,8 @@ func (xs *Server) startServer(network, address string) (err error) {
 	err = scc.Timeout(time.Second, func() error {
 		return xs.Server.Serve(network, address)
 	})
-	if errors.Is(scc.ErrorTimeout, err) {
+	//errors.Is参数顺序:err在前,target在后,写反会漏匹配wrap过的超时错误
+	if errors.Is(err, scc.ErrorTimeout) {
 		err = nil
 	}
 	return
@@ -164,7 +165,7 @@ func (xs *Server) Start() (err error) {
 	if xs.Registry.Len() == 0 {
 		return
 	}
-	if !atomic.CompareAndSwapInt32(&xs.started, 0, 1) {
+	if !xs.started.CompareAndSwap(0, 1) {
 		return
 	}
 	address := cosrpc.Address()
@@ -197,7 +198,7 @@ func (xs *Server) Start() (err error) {
 // 2. 关闭 rpcx Server
 // 3. 停止服务注册
 func (xs *Server) Close() error {
-	if !atomic.CompareAndSwapInt32(&xs.started, 1, 0) {
+	if !xs.started.CompareAndSwap(1, 0) {
 		return nil
 	}
 	// rpcx 会在仍有在途请求时调用 ctx.Done，不能传 nil。这里使用独立的有界

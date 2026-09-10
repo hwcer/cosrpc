@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"maps"
 	"reflect"
 	"strings"
 	"sync"
@@ -58,9 +59,7 @@ func (xc *clients) close() (err error) {
 }
 func (xc *clients) reload() (err error) {
 	cs := make(map[string]*Client)
-	for k, c := range xc.dict {
-		cs[k] = c
-	}
+	maps.Copy(cs, xc.dict)
 	var c *Client
 	for name, value := range cosrpc.Service {
 		s := xc.selector(name, value)
@@ -258,9 +257,7 @@ func (xc *clients) load(name string, selector any) (c *Client, err error) {
 		return c, nil
 	}
 	cs := make(map[string]*Client)
-	for k, v := range xc.dict {
-		cs[k] = v
-	}
+	maps.Copy(cs, xc.dict)
 	var s any
 	switch v := selector.(type) {
 	case string:

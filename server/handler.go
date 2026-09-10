@@ -17,7 +17,7 @@ type HandlerFilter func(node *registry.Node) bool
 
 // HandlerCaller 定义服务调用器
 // 用于处理 RPC 请求并返回结果
-type HandlerCaller func(node *registry.Node, c *cosrpc.Context) (interface{}, error)
+type HandlerCaller func(node *registry.Node, c *cosrpc.Context) (any, error)
 
 // HandlerMetadata 定义服务元数据提供者
 // 用于获取服务的元数据
@@ -29,12 +29,12 @@ type HandlerMiddleware func(*cosrpc.Context) error
 
 // HandlerSerialize 定义服务序列化器
 // 用于序列化响应数据
-type HandlerSerialize func(c *cosrpc.Context, reply interface{}) ([]byte, error)
+type HandlerSerialize func(c *cosrpc.Context, reply any) ([]byte, error)
 
 // handleCaller 定义内部调用接口
 // 用于统一处理不同类型的调用
 type handleCaller interface {
-	Caller(node *registry.Node, c *cosrpc.Context) interface{}
+	Caller(node *registry.Node, c *cosrpc.Context) any
 }
 
 // Handler 是 cosrpc 服务器的处理器
@@ -49,7 +49,7 @@ type Handler struct {
 
 // Use 应用一个处理器
 // 根据处理器的类型，将其添加到对应的处理器列表中
-func (this *Handler) Use(src interface{}) {
+func (this *Handler) Use(src any) {
 	if v, ok := src.(HandlerCaller); ok {
 		this.caller = v
 	}
@@ -75,7 +75,7 @@ func (this *Handler) Filter(node *registry.Node) bool {
 		return this.filter(node)
 	}
 	if node.IsFunc() {
-		_, ok := node.Method().(func(*cosrpc.Context) interface{})
+		_, ok := node.Method().(func(*cosrpc.Context) any)
 		return ok
 	} else if node.IsMethod() {
 		t := node.Value().Type()
@@ -106,7 +106,7 @@ func (this *Handler) Metadata() string {
 // 1. 执行所有中间件
 // 2. 如果有自定义调用器，使用自定义调用器
 // 3. 否则，根据节点类型进行默认调用
-func (this *Handler) Caller(node *registry.Node, c *cosrpc.Context) (reply interface{}, err error) {
+func (this *Handler) Caller(node *registry.Node, c *cosrpc.Context) (reply any, err error) {
 	defer func() {
 		if e := recover(); e != nil {
 			err = values.Errorf(500, "server recover error")
@@ -122,7 +122,7 @@ func (this *Handler) Caller(node *registry.Node, c *cosrpc.Context) (reply inter
 		return this.caller(node, c)
 	}
 	if node.IsFunc() {
-		m := node.Method().(func(*cosrpc.Context) interface{})
+		m := node.Method().(func(*cosrpc.Context) any)
 		reply = m(c)
 	} else if s, ok := node.Binder().(handleCaller); ok {
 		reply = s.Caller(node, c)

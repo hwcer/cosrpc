@@ -2,11 +2,9 @@ package client
 
 import (
 	"context"
-	"github.com/hwcer/cosrpc"
 	"github.com/hwcer/logger"
 	"github.com/smallnest/rpcx/client"
 	"reflect"
-	"time"
 )
 
 type Caller = client.Call
@@ -28,10 +26,6 @@ func SetSelector(s any) {
 
 func SetDiscovery(d discovery) {
 	discoveryDefault = d
-}
-
-func ping(c *cosrpc.Context) interface{} {
-	return time.Now().Unix()
 }
 
 func Call(ctx context.Context, servicePath, serviceMethod string, args, reply any) (err error) {

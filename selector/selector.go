@@ -47,7 +47,7 @@ func (this *Selector) SelectWithServerId(list []*selectorNode) (r string) {
 }
 
 // Select 默认按负载
-func (this *Selector) Select(ctx context.Context, servicePath, serviceMethod string, args interface{}) (r string) {
+func (this *Selector) Select(ctx context.Context, servicePath, serviceMethod string, args any) (r string) {
 	metadata, _ := ctx.Value(share.ReqMetaDataKey).(map[string]string)
 	if metadata != nil {
 		if address, ok := metadata[MetaDataAddress]; ok {

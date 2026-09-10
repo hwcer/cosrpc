@@ -20,7 +20,7 @@ type closeTestRegister struct {
 
 func (*closeTestRegister) Start() error { return nil }
 
-func (*closeTestRegister) Register(string, interface{}, string) error { return nil }
+func (*closeTestRegister) Register(string, any, string) error { return nil }
 
 func (r *closeTestRegister) Stop() error {
 	r.stops.Add(1)
@@ -33,7 +33,7 @@ func TestCloseTimesOutInflightRequestAndStopsRegister(t *testing.T) {
 	t.Cleanup(func() { cosrpc.Config.Timeout = oldTimeout })
 
 	xs := New()
-	atomic.StoreInt32(&xs.started, 1)
+	xs.started.Store(1)
 	registerErr := errors.New("register stop failed")
 	reg := &closeTestRegister{stopErr: registerErr}
 	xs.register = reg

@@ -67,7 +67,7 @@ func (this *Context) Write(data []byte) error {
 }
 
 // Bind 绑定请求数据到指定的结构体
-func (this *Context) Bind(i interface{}) error {
+func (this *Context) Bind(i any) error {
 	//if b, ok := this.ctx.(IContextBinder); ok {
 	//	return b.Bind(i)
 	//}
@@ -93,12 +93,12 @@ func (this *Context) Error(err any) *values.Message {
 }
 
 // Errorf 创建一个带错误码的错误消息
-func (this *Context) Errorf(code int32, format any, args ...interface{}) *values.Message {
+func (this *Context) Errorf(code int32, format any, args ...any) *values.Message {
 	return values.Errorf(code, format, args...)
 }
 
 // Get 获取请求体中的值
-func (this *Context) Get(key string) interface{} {
+func (this *Context) Get(key string) any {
 	v := this.values()
 	return v.Get(key)
 }

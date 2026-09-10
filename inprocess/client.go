@@ -34,7 +34,7 @@ func (c *Client) SetSelector(s client.Selector)                 {}
 func (c *Client) ConfigGeoSelector(latitude, longitude float64) {}
 func (c *Client) Auth(auth string)                              {}
 
-func (c *Client) Go(ctx context.Context, serviceMethod string, args interface{}, reply interface{}, done chan *client.Call) (*client.Call, error) {
+func (c *Client) Go(ctx context.Context, serviceMethod string, args any, reply any, done chan *client.Call) (*client.Call, error) {
 	return nil, nil
 }
 
@@ -76,16 +76,16 @@ func (c *Client) Call(ctx context.Context, serviceMethod string, args any, reply
 	return Unmarshal(sc.reply, reply)
 }
 
-func (c *Client) Oneshot(ctx context.Context, serviceMethod string, args interface{}) error {
+func (c *Client) Oneshot(ctx context.Context, serviceMethod string, args any) error {
 	return c.Call(ctx, serviceMethod, args, nil)
 }
-func (c *Client) Broadcast(ctx context.Context, serviceMethod string, args interface{}, reply interface{}) error {
+func (c *Client) Broadcast(ctx context.Context, serviceMethod string, args any, reply any) error {
 	return c.Call(ctx, serviceMethod, args, reply)
 }
-func (c *Client) Fork(ctx context.Context, serviceMethod string, args interface{}, reply interface{}) error {
+func (c *Client) Fork(ctx context.Context, serviceMethod string, args any, reply any) error {
 	return c.Call(ctx, serviceMethod, args, reply)
 }
-func (c *Client) Inform(ctx context.Context, serviceMethod string, args interface{}, reply interface{}) ([]client.Receipt, error) {
+func (c *Client) Inform(ctx context.Context, serviceMethod string, args any, reply any) ([]client.Receipt, error) {
 	err := c.Call(ctx, serviceMethod, args, reply)
 	if err != nil {
 		return nil, err
