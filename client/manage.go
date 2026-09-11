@@ -8,6 +8,7 @@ import (
 	"reflect"
 	"strings"
 	"sync"
+	"sync/atomic"
 
 	"github.com/hwcer/cosgo"
 	"github.com/hwcer/cosgo/binder"
@@ -26,12 +27,15 @@ var Manage = clients{}
 // Discovery 注册中心服务发现,点对点或者点对多时无需设置
 
 type clients struct {
-	dict  map[string]*Client
+	//dict 读多写少:读(Get/Has/Size,每次 RPC 都走)无锁 atomic Load,
+	//写(load/reload,COW 新 map)在 mutex 内整体 Store 发布。
+	//裸读 map 字段与并发 COW 重赋是数据竞争(-race 判据:字段发布必须原子)
+	dict  atomic.Pointer[map[string]*Client]
 	mutex sync.Mutex
 }
 
 func init() {
-	Manage.dict = make(map[string]*Client)
+	Manage.dict.Store(&map[string]*Client{})
 	cosgo.On(cosgo.EventTypClosing, Manage.close)
 	cosgo.On(cosgo.EventTypLoaded, Manage.reload)
 	cosgo.On(cosgo.EventTypReload, Manage.reload)
@@ -50,16 +54,21 @@ func (xc *clients) addServicePath(servicePath string, selector any) (c *Client, 
 }
 
 func (xc *clients) close() (err error) {
-	for _, c := range xc.dict {
+	for _, c := range *xc.dict.Load() {
 		if err = c.close(); err != nil {
 			return
 		}
 	}
 	return
 }
+// reload EventTypLoaded/Reload 触发;Loaded 在启动期,Reload 可能与运行中的
+// load 并发——整个读-建-换必须在 mutex 内序列化,否则会整表覆盖掉并发 load
+// 刚加进去的条目(读侧的竞争由 dict 的原子发布兜住)
 func (xc *clients) reload() (err error) {
+	xc.mutex.Lock()
+	defer xc.mutex.Unlock()
 	cs := make(map[string]*Client)
-	maps.Copy(cs, xc.dict)
+	maps.Copy(cs, *xc.dict.Load())
 	var c *Client
 	for name, value := range cosrpc.Service {
 		s := xc.selector(name, value)
@@ -72,18 +81,18 @@ func (xc *clients) reload() (err error) {
 			return
 		}
 	}
-	Manage.dict = cs
+	Manage.dict.Store(&cs)
 	return
 }
 
 func (xc *clients) Has(servicePath string) bool {
-	_, ok := xc.dict[servicePath]
+	_, ok := (*xc.dict.Load())[servicePath]
 	return ok
 }
 
 func (xc *clients) Get(servicePath string) (c client.XClient) {
 	var err error
-	if cs := xc.dict[servicePath]; cs != nil {
+	if cs := (*xc.dict.Load())[servicePath]; cs != nil {
 		c = cs.client
 	} else if cs, err = xc.load(servicePath, cosrpc.SelectorTypeDiscovery); err == nil {
 		c = cs.client
@@ -93,7 +102,7 @@ func (xc *clients) Get(servicePath string) (c client.XClient) {
 	return
 }
 func (xc *clients) Size() int {
-	return len(xc.dict)
+	return len(*xc.dict.Load())
 }
 
 //func (xc *clients) Client(servicePath string) (c client.XClient, err error) {
@@ -253,11 +262,11 @@ func (xc *clients) CallWithMetadata(req, res map[string]string, servicePath, ser
 func (xc *clients) load(name string, selector any) (c *Client, err error) {
 	xc.mutex.Lock()
 	defer xc.mutex.Unlock()
-	if c = xc.dict[name]; c != nil {
+	if c = (*xc.dict.Load())[name]; c != nil {
 		return c, nil
 	}
 	cs := make(map[string]*Client)
-	maps.Copy(cs, xc.dict)
+	maps.Copy(cs, *xc.dict.Load())
 	var s any
 	switch v := selector.(type) {
 	case string:
@@ -270,7 +279,7 @@ func (xc *clients) load(name string, selector any) (c *Client, err error) {
 	} else {
 		return
 	}
-	xc.dict = cs
+	xc.dict.Store(&cs)
 	return
 }
 
