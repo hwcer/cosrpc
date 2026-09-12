@@ -3,8 +3,8 @@ module github.com/hwcer/cosrpc
 go 1.26.0
 
 require (
-	github.com/hwcer/cosgo v1.8.4-0.20260904100637-05162b06213a
-	github.com/hwcer/logger v0.2.9-0.20260626033726-42e0a5927245
+	github.com/hwcer/cosgo v1.8.4-0.20260912010310-8e8fd00d86e3
+	github.com/hwcer/logger v0.2.9-0.20260910161556-c8faab738be9
 	go.mongodb.org/mongo-driver/v2 v2.7.0 // indirect
 )
 
@@ -43,7 +43,6 @@ require (
 	github.com/mattn/go-colorable v0.1.15 // indirect
 	github.com/mattn/go-isatty v0.0.22 // indirect
 	github.com/miekg/dns v1.1.72 // indirect
-	github.com/onsi/gomega v1.41.0 // indirect
 	github.com/pelletier/go-toml/v2 v2.4.2 // indirect
 	github.com/philhofer/fwd v1.2.0 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
@@ -80,7 +79,6 @@ require (
 	go.uber.org/mock v0.6.0 // indirect
 	go.yaml.in/yaml/v3 v3.0.4 // indirect
 	golang.org/x/crypto v0.53.0 // indirect
-	golang.org/x/exp v0.0.0-20260611194520-c48552f49976 // indirect
 	golang.org/x/mod v0.37.0 // indirect
 	golang.org/x/net v0.56.0 // indirect
 	golang.org/x/sync v0.21.0 // indirect
@@ -91,4 +89,7 @@ require (
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 )
 
-require github.com/smallnest/gordma v0.3.0 // indirect
+require (
+	github.com/rogpeppe/go-internal v1.13.1 // indirect
+	github.com/smallnest/gordma v0.3.0 // indirect
+)
