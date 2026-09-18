@@ -138,8 +138,8 @@ github.com/hashicorp/mdns v1.0.1/go.mod h1:4gW7WsVCke5TE7EPeYliwHlRUyBtfCwuFwuMg
 github.com/hashicorp/memberlist v0.2.2/go.mod h1:MS2lj3INKhZjWNqd3N0m3J+Jxf3DAOnAH9VT3Sh9MUE=
 github.com/hashicorp/serf v0.9.5/go.mod h1:UWDWwZeL5cuWDJdl0C6wrvrUwEqtQ4ZKBKKENpqIUyk=
 github.com/hpcloud/tail v1.0.0/go.mod h1:ab1qPbhIpdTxEkNHXyeSf5vhxWSCs/tWer42PpOxQnU=
-github.com/hwcer/cosgo v1.8.4-0.20260912010310-8e8fd00d86e3 h1:8vPP2Wo1BMjtgO3qkjISzTTNoQ5S0GzAmIrFPnZ/S1M=
-github.com/hwcer/cosgo v1.8.4-0.20260912010310-8e8fd00d86e3/go.mod h1:RtiJ04/yrHSzqSLD+o/pLJYcrQGr+ywSlwhdDTUU1GE=
+github.com/hwcer/cosgo v1.8.4-0.20260916091516-7d4abbb6f7b5 h1:vacRMywBgCtkck8CGmFevpRVNvTWGmC/qW29BX+ycAo=
+github.com/hwcer/cosgo v1.8.4-0.20260916091516-7d4abbb6f7b5/go.mod h1:RtiJ04/yrHSzqSLD+o/pLJYcrQGr+ywSlwhdDTUU1GE=
 github.com/hwcer/logger v0.2.9-0.20260910161556-c8faab738be9 h1:ELJ+1dXuWuxW710mfXjG9lelccEWUigvU4lGZ/R+8UI=
 github.com/hwcer/logger v0.2.9-0.20260910161556-c8faab738be9/go.mod h1:EjeW8zyZPytb4WuWt81dSvlOvdnQ358hD1TwSC3xVW8=
 github.com/json-iterator/go v1.1.6/go.mod h1:+SdeFBvtyEkXs7REEP0seUULqWtbJapLOCVDaaPEHmU=
