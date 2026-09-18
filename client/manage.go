@@ -61,6 +61,7 @@ func (xc *clients) close() (err error) {
 	}
 	return
 }
+
 // reload EventTypLoaded/Reload 触发;Loaded 在启动期,Reload 可能与运行中的
 // load 并发——整个读-建-换必须在 mutex 内序列化,否则会整表覆盖掉并发 load
 // 刚加进去的条目(读侧的竞争由 dict 的原子发布兜住)

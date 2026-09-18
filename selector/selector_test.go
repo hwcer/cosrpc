@@ -101,6 +101,6 @@ func TestSelectConcurrentWithUpdate(t *testing.T) {
 			}
 		}(i)
 	}
-	go func() { close(done); }()
+	go func() { close(done) }()
 	wg.Wait()
 }

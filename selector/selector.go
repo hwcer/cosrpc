@@ -28,7 +28,7 @@ func New(servicePath string) *Selector {
 type selectorNode struct {
 	sid     string //服务器
 	index   uint64
-	Address string //tcp@127.0.0.1:8000
+	Address string       //tcp@127.0.0.1:8000
 	Average atomic.Int32 //负载:Select 并发读改写,必须原子
 }
 
