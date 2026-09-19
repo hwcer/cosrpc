@@ -91,7 +91,10 @@ func (p *Register) Start() error {
 						extra["connections"] = fmt.Sprintf("%.2f", metrics.GetOrRegisterMeter("connections", p.Metrics).RateMean())
 					}
 					//set this same metrics for all services at this server
-					for _, name := range p.Services {
+					p.metasLock.RLock()
+					services := p.Services
+					p.metasLock.RUnlock()
+					for _, name := range services {
 						nodePath := fmt.Sprintf("%s/%s/%s", p.BasePath, name, p.ServiceAddress)
 						kvPair, err := p.kv.Get(nodePath)
 						if err != nil {
@@ -141,7 +144,10 @@ func (p *Register) Stop() error {
 
 		//2. 再删服务节点
 		if p.kv != nil {
-			for _, name := range p.Services {
+			p.metasLock.RLock()
+			services := p.Services
+			p.metasLock.RUnlock()
+			for _, name := range services {
 				nodePath := fmt.Sprintf("%s/%s/%s", p.BasePath, name, p.ServiceAddress)
 				exist, err := p.kv.Exists(nodePath)
 				if err != nil {
@@ -217,9 +223,9 @@ func (p *Register) Register(name string, rcvr any, metadata string) (err error) 
 		return err
 	}
 
-	p.Services = append(p.Services, name)
-
+	//Services 与 metas 同锁:续期协程/Stop 读 Services 与 Register/Unregister 写并发
 	p.metasLock.Lock()
+	p.Services = append(p.Services, name)
 	if p.metas == nil {
 		p.metas = make(map[string]string)
 	}
@@ -229,7 +235,7 @@ func (p *Register) Register(name string, rcvr any, metadata string) (err error) 
 }
 
 func (p *Register) Unregister(name string) (err error) {
-	if len(p.Services) == 0 {
+	if len(p.Services) == 0 { //仅启动期单线程调用,无需加锁
 		return nil
 	}
 
@@ -269,15 +275,14 @@ func (p *Register) Unregister(name string) (err error) {
 		return err
 	}
 
-	var services = make([]string, 0, len(p.Services)-1)
+	p.metasLock.Lock()
+	services := make([]string, 0, len(p.Services))
 	for _, s := range p.Services {
 		if s != name {
 			services = append(services, s)
 		}
 	}
 	p.Services = services
-
-	p.metasLock.Lock()
 	if p.metas == nil {
 		p.metas = make(map[string]string)
 	}

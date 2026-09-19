@@ -34,8 +34,21 @@ func (c *Client) SetSelector(s client.Selector)                 {}
 func (c *Client) ConfigGeoSelector(latitude, longitude float64) {}
 func (c *Client) Auth(auth string)                              {}
 
+// Go 异步调用:同步执行后返回已完成的 Call。
+// 🔴 旧实现返回 (nil, nil)——调用方拿到 done==nil 且 err==nil,
+// 后续 <-call.Done() 直接 nil 指针 panic,且无任何途径感知结果
 func (c *Client) Go(ctx context.Context, serviceMethod string, args any, reply any, done chan *client.Call) (*client.Call, error) {
-	return nil, nil
+	call := &client.Call{ServicePath: c.servicePath, ServiceMethod: serviceMethod, Args: args, Reply: reply}
+	if done != nil {
+		call.Done = done
+	} else {
+		call.Done = make(chan *client.Call, 1)
+	}
+	go func() {
+		call.Error = c.Call(ctx, serviceMethod, args, reply)
+		call.Done <- call
+	}()
+	return call, nil
 }
 
 func (c *Client) Call(ctx context.Context, serviceMethod string, args any, reply any) (err error) {
