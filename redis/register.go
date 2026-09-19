@@ -96,15 +96,21 @@ func (p *Register) Start() error {
 					p.metasLock.RUnlock()
 					for _, name := range services {
 						nodePath := fmt.Sprintf("%s/%s/%s", p.BasePath, name, p.ServiceAddress)
+						if p.Metrics == nil {
+							//🔴 无指标合并需求时免 GET 直接 SET 续期:TTL 续期本身只需
+							//覆盖 TTL,旧实现每 tick 每服务一次 GET+ParseQuery+重编码
+							//纯属浪费,且每次 SET 都触发 keyspace 事件放大 watch 流量
+							err := p.kv.Put(nodePath, []byte(p.metasGet(name)), &store.WriteOptions{TTL: p.UpdateInterval * 2})
+							if err != nil {
+								log.Errorf("cannot renew redis path %s: %v", nodePath, err)
+							}
+							continue
+						}
 						kvPair, err := p.kv.Get(nodePath)
 						if err != nil {
 							log.Infof("can't get data of node: %s, because of %v", nodePath, err.Error())
 
-							p.metasLock.RLock()
-							meta := p.metas[name]
-							p.metasLock.RUnlock()
-
-							err = p.kv.Put(nodePath, []byte(meta), &store.WriteOptions{TTL: p.UpdateInterval * 2})
+							err = p.kv.Put(nodePath, []byte(p.metasGet(name)), &store.WriteOptions{TTL: p.UpdateInterval * 2})
 							if err != nil {
 								log.Errorf("cannot re-create redis path %s: %v", nodePath, err)
 							}
@@ -167,6 +173,13 @@ func (p *Register) Stop() error {
 		}
 	})
 	return nil
+}
+
+// metasGet 读指定服务的注册元数据(调用方自行决定锁范围,这里统一持读锁)
+func (p *Register) metasGet(name string) string {
+	p.metasLock.RLock()
+	defer p.metasLock.RUnlock()
+	return p.metas[name]
 }
 
 // HandleConnAccept handles connections from clients
