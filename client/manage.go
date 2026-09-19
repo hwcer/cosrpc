@@ -68,8 +68,9 @@ func (xc *clients) close() (err error) {
 func (xc *clients) reload() (err error) {
 	xc.mutex.Lock()
 	defer xc.mutex.Unlock()
+	oldDict := *xc.dict.Load()
 	cs := make(map[string]*Client)
-	maps.Copy(cs, *xc.dict.Load())
+	maps.Copy(cs, oldDict)
 	var c *Client
 	for name, value := range cosrpc.Service {
 		s := xc.selector(name, value)
@@ -83,6 +84,14 @@ func (xc *clients) reload() (err error) {
 		}
 	}
 	Manage.dict.Store(&cs)
+	//关闭被替换/下线的旧 Client:旧实现从不关闭,每次热更新泄漏一个
+	//XClient(缓存连接 + watch 协程)与它持有的 Discovery(redis 连接 + watch 协程)。
+	//代价:swap 瞬间在途的旧请求可能拿到连接已关的一次性错误,调用方按可重试处理
+	for path, old := range oldDict {
+		if nc, ok := cs[path]; !ok || nc != old {
+			_ = old.close()
+		}
+	}
 	return
 }
 

@@ -32,6 +32,44 @@ type Discovery struct {
 	RetriesAfterWatchFailed int
 	filter                  client.ServiceDiscoveryFilter
 	stopCh                  chan struct{}
+	closeOnce               sync.Once
+}
+
+// reconcileInterval 全量校验间隔。
+//
+// 🔴 watch 通道有两条静默失联路径:
+//  1. libkv 的 watchLoop 内部出错时只退出内部循环、从不 close watch 通道——
+//     本包 watch() 的 `<-c` 永远等不到,"chan is closed and will rewatch" 是死代码,
+//     redis 一次抖动后 discovery 就永久冻结在旧列表上;
+//  2. "最后一个节点过期/被删"的空列表通知被 libkv 的类型断言丢弃,死节点永不摘除
+//     (单节点服务则永久挂死)。
+//
+// 定期全量 List 比对是唯一可靠的兜底:watch 只作加速,准确性以这里为准。
+var reconcileInterval = 2 * time.Second
+
+func (d *Discovery) reconcile() {
+	ticker := time.NewTicker(reconcileInterval)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-d.stopCh:
+			return
+		case <-ticker.C:
+			ps, err := d.kv.List(d.basePath)
+			if err != nil && !(AllowKeyNotFound && err == store.ErrKeyNotFound) {
+				continue //本轮失败,下轮再试;保持上一份快照
+			}
+			pairs := d.setPairs(ps)
+			d.mu.Lock()
+			for _, ch := range d.chans {
+				select {
+				case ch <- pairs:
+				default:
+				}
+			}
+			d.mu.Unlock()
+		}
+	}
 }
 
 // NewDiscovery returns a new Discovery.
@@ -62,6 +100,7 @@ func NewDiscoveryStore(basePath string, kv store.Store) (*Discovery, error) {
 	d.setPairs(ps)
 	d.RetriesAfterWatchFailed = -1
 	go d.watch()
+	go d.reconcile()
 	return d, nil
 }
 
@@ -197,7 +236,9 @@ func (d *Discovery) watch() {
 }
 
 func (d *Discovery) Close() {
-	close(d.stopCh)
+	d.closeOnce.Do(func() {
+		close(d.stopCh)
+	})
 }
 
 func (d *Discovery) prefix(key string) (prefix string) {

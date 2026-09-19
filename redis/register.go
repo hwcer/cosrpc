@@ -39,8 +39,9 @@ type Register struct {
 	Options *store.Config
 	kv      store.Store
 
-	dying chan struct{}
-	done  chan struct{}
+	dying    chan struct{}
+	done     chan struct{}
+	stopOnce sync.Once //Stop 防重入:close(dying) 二次调用会 panic
 }
 
 // Start starts to connect redis cluster
@@ -74,7 +75,8 @@ func (p *Register) Start() error {
 			ticker := time.NewTicker(p.UpdateInterval)
 
 			defer ticker.Stop()
-			defer p.kv.Close()
+			//kv 的 Close 移到 Stop:旧实现在这里无条件关闭,Stop 删节点时连接已断,
+			//Delete 全部失败,节点只能等 TTL 过期
 
 			// refresh service TTL
 			for {
@@ -121,32 +123,43 @@ func (p *Register) Start() error {
 }
 
 // Stop unregister all services.
+//
+// 🔴 顺序必须是"先停续期协程、再删节点、最后关连接":旧实现先 Delete 再 close(dying),
+// 间隙内 ticker 触发时续期协程 Get 失败会走 metas 重建逻辑把已下线节点重新写入 redis,
+// 客户端继续路由到已停止的服务直至 TTL 过期(僵尸注册)。
+// Start 从未执行(Register 中途失败,如 redis 不可用)时 done/dying 为 nil,
+// 旧实现的 <-p.done 对 nil channel 永久阻塞,进程无法优雅退出。
 func (p *Register) Stop() error {
-	if p.kv == nil {
-		kv, err := libkv.NewStore(store.REDIS, p.RedisServers, p.Options)
-		if err != nil {
-			log.Errorf("cannot create redis registry: %v", err)
-			return err
+	p.stopOnce.Do(func() {
+		//1. 先停续期协程并等它退出(nil 防护:Register 失败未 Start 时两者皆 nil)
+		if p.dying != nil {
+			close(p.dying)
 		}
-		p.kv = kv
-	}
-
-	for _, name := range p.Services {
-		nodePath := fmt.Sprintf("%s/%s/%s", p.BasePath, name, p.ServiceAddress)
-		exist, err := p.kv.Exists(nodePath)
-		if err != nil {
-			log.Errorf("cannot delete path %s: %v", nodePath, err)
-			continue
+		if p.done != nil {
+			<-p.done
 		}
-		if exist {
-			_ = p.kv.Delete(nodePath)
-			log.Infof("delete path %s", nodePath)
+
+		//2. 再删服务节点
+		if p.kv != nil {
+			for _, name := range p.Services {
+				nodePath := fmt.Sprintf("%s/%s/%s", p.BasePath, name, p.ServiceAddress)
+				exist, err := p.kv.Exists(nodePath)
+				if err != nil {
+					log.Errorf("cannot delete path %s: %v", nodePath, err)
+					continue
+				}
+				if exist {
+					_ = p.kv.Delete(nodePath)
+					log.Infof("delete path %s", nodePath)
+				}
+			}
 		}
-	}
 
-	close(p.dying)
-	<-p.done
-
+		//3. 最后关连接(原续期协程的 defer p.kv.Close() 已移除)
+		if p.kv != nil {
+			p.kv.Close()
+		}
+	})
 	return nil
 }
 

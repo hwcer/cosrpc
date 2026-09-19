@@ -9,6 +9,7 @@ import (
 
 	"github.com/hwcer/cosgo/registry"
 	"github.com/hwcer/cosgo/scc"
+	"github.com/hwcer/cosgo/values"
 	"github.com/hwcer/cosrpc"
 	"github.com/hwcer/logger"
 	"github.com/smallnest/rpcx/server"
@@ -59,6 +60,10 @@ func (xs *Server) Caller(sc cosrpc.IContext, node *registry.Node) (err error) {
 	defer func() {
 		if r := recover(); r != nil {
 			logger.Alert("rpcx server recover error:%v", r)
+			//🔴 必须把 panic 转为错误返回:旧实现只记日志、err 保持 nil,
+			//rpcx 视为处理成功,客户端收到"成功 + 空 reply"(上层对空 payload 静默放行),
+			//服务端异常被无声吞掉
+			err = values.Errorf(500, "server panic: %v", r)
 		}
 	}()
 
