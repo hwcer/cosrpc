@@ -13,7 +13,12 @@ import (
 // Client 是 cosrpc 客户端的核心结构
 // 封装了 rpcx XClient 并提供了多种服务发现模式
 type Client struct {
-	client   client.XClient  // 内嵌的 rpcx XClient
+	client   client.XClient // 内嵌的 rpcx XClient
+	// discovery 持有服务发现器引用。🔴 XClient.Close 只做 RemoveWatcher+close(ch),
+	// 从不调用 Discovery.Close(rpcx v1.9 源码 xclient.go);不持有关闭的话,reload
+	// 换掉的每个旧 Client 都泄漏一个 redis 连接 + watch/reconcile 协程,且
+	// reconcile 每 2s 对 redis 永久轮询一次
+	discovery client.ServiceDiscovery
 	Option   client.Option   // 客户端选项
 	started  atomic.Int32    // 客户端启动状态，0 未启动，1 已启动
 	FailMode client.FailMode // 失败处理模式
@@ -57,9 +62,14 @@ func (this *Client) start() (err error) {
 	return
 }
 
-// close 关闭客户端
+// close 关闭客户端:XClient 与其 Discovery 一并关闭。
+// XClient.Close 不传播到 Discovery,后者必须显式关闭,否则泄漏
 func (this *Client) close() error {
-	return this.client.Close()
+	err := this.client.Close()
+	if this.discovery != nil {
+		this.discovery.Close() //幂等(Discovery 内部 sync.Once);终结 watch/reconcile 协程与 kv 连接
+	}
+	return err
 }
 
 // Peer2Peer 点对点调用模式
@@ -69,6 +79,7 @@ func (this *Client) Peer2Peer(address string) error {
 	if err != nil {
 		return err
 	}
+	this.discovery = dis
 	this.client = client.NewXClient(this.ServicePath, this.FailMode, client.RandomSelect, dis, this.Option)
 	return nil
 }
@@ -85,6 +96,7 @@ func (this *Client) Multiple(address []string) error {
 		return err
 	}
 
+	this.discovery = dis
 	this.client = client.NewXClient(this.ServicePath, this.FailMode, client.RandomSelect, dis, this.Option)
 	return nil
 }
@@ -100,6 +112,7 @@ func (this *Client) Registry(selectMod client.SelectMode, selector client.Select
 		return err
 	}
 
+	this.discovery = dis
 	this.client = client.NewXClient(this.ServicePath, this.FailMode, selectMod, dis, this.Option)
 	if selectMod == client.SelectByUser && selector != nil {
 		this.client.SetSelector(selector)

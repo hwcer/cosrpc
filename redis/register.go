@@ -45,13 +45,13 @@ type Register struct {
 }
 
 // Start starts to connect redis cluster
+//
+// 🔴 done/dying 每次 Start 重建(而非 nil 才建):Start 中途失败已 close(p.done),
+// 旧实现的"nil 才建"让重试 Start 沿用已关闭的 channel,续期协程退出时再 close 即 panic。
+// 代价是 Stop 后不可再 Start(Stop 的 stopOnce 已消费),本注册器本就不支持重启
 func (p *Register) Start() error {
-	if p.done == nil {
-		p.done = make(chan struct{})
-	}
-	if p.dying == nil {
-		p.dying = make(chan struct{})
-	}
+	p.done = make(chan struct{})
+	p.dying = make(chan struct{})
 
 	if p.kv == nil {
 		kv, err := libkv.NewStore(store.REDIS, p.RedisServers, p.Options)
@@ -73,7 +73,6 @@ func (p *Register) Start() error {
 	if p.UpdateInterval > 0 {
 		go func() {
 			ticker := time.NewTicker(p.UpdateInterval)
-
 			defer ticker.Stop()
 			//kv 的 Close 移到 Stop:旧实现在这里无条件关闭,Stop 删节点时连接已断,
 			//Delete 全部失败,节点只能等 TTL 过期
@@ -126,6 +125,11 @@ func (p *Register) Start() error {
 				}
 			}
 		}()
+	} else {
+		//🔴 无续期协程时 done 无人关闭:Stop 的 <-p.done 对已关闭 channel 立即返回、
+		//对 nil channel 永久阻塞、对打开但无人关的 channel 也永久阻塞——
+		//UpdateInterval<=0 的配置此前 Stop 必挂死
+		close(p.done)
 	}
 
 	return nil

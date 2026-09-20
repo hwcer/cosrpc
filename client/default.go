@@ -2,6 +2,7 @@ package client
 
 import (
 	"context"
+	"github.com/hwcer/cosgo/phase"
 	"github.com/hwcer/logger"
 	"github.com/smallnest/rpcx/client"
 	"reflect"
@@ -15,7 +16,13 @@ type discovery func(ServicePath string) (client.ServiceDiscovery, error)
 var selectorDefault any = client.RandomSelect
 var discoveryDefault discovery
 
+// SetSelector 🔴 仅启动期调用:写入包级变量,reload/调用链运行期只读,
+// 守卫读 cosgo/phase,封板后只 Alert 提示并忽略
 func SetSelector(s any) {
+	if phase.Sealed() {
+		phase.Alert("cosrpc.SetSelector")
+		return
+	}
 	switch s.(type) {
 	case client.Selector, client.SelectMode:
 		selectorDefault = s
@@ -25,6 +32,10 @@ func SetSelector(s any) {
 }
 
 func SetDiscovery(d discovery) {
+	if phase.Sealed() {
+		phase.Alert("cosrpc.SetDiscovery")
+		return
+	}
 	discoveryDefault = d
 }
 

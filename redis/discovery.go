@@ -59,7 +59,14 @@ func (d *Discovery) reconcile() {
 			if err != nil && !(AllowKeyNotFound && err == store.ErrKeyNotFound) {
 				continue //本轮失败,下轮再试;保持上一份快照
 			}
+			prev := d.GetServices()
 			pairs := d.setPairs(ps)
+			//🔴 无变化不重推:rpcx xClient.watch 每收到一次推送都会 UpdateServer
+			//重建 selectorNode,进程内累计的负载计数(Average)被 metadata 里的旧值
+			//抹平——每 2s 盲推等于把最小负载选择每 2s 重新起跑
+			if pairsEqual(prev, pairs) {
+				continue
+			}
 			d.mu.Lock()
 			for _, ch := range d.chans {
 				select {
@@ -70,6 +77,23 @@ func (d *Discovery) reconcile() {
 			d.mu.Unlock()
 		}
 	}
+}
+
+// pairsEqual 按 key→value 集合比较两份快照(不比顺序,redis List 的返回序不稳定)
+func pairsEqual(a, b []*client.KVPair) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	m := make(map[string]string, len(a))
+	for _, p := range a {
+		m[p.Key] = p.Value
+	}
+	for _, p := range b {
+		if v, ok := m[p.Key]; !ok || v != p.Value {
+			return false
+		}
+	}
+	return true
 }
 
 // NewDiscovery returns a new Discovery.
