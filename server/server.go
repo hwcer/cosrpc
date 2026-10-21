@@ -116,7 +116,7 @@ func (xs *Server) startServer(network, address string) (err error) {
 // startRegister 启动服务注册
 // 1. 检查默认注册器是否存在
 // 2. 创建注册器实例
-// 3. 收集服务信息
+// 3. 收集服务信息（collectAnnounce：空表不宣告）
 // 4. 注册服务
 // 5. 启动注册器
 func (xs *Server) startRegister() (err error) {
@@ -127,13 +127,7 @@ func (xs *Server) startRegister() (err error) {
 	if xs.register, err = defaultRegister(); err != nil {
 		return err
 	}
-	// 注册服务,实现 rpcxServiceHandlerMetadata 才具有服务发现功能
-	service := map[string]string{}
-	xs.Registry.Range(func(s *registry.Service) bool {
-		name := strings.TrimPrefix(s.Name(), "/")
-		service[name] = Metadata.Get(name)
-		return true
-	})
+	service := xs.collectAnnounce()
 	if len(service) == 0 {
 		return
 	}
@@ -147,6 +141,28 @@ func (xs *Server) startRegister() (err error) {
 	}
 	xs.Server.Plugins.Add(xs.Registry)
 	return
+}
+
+// collectAnnounce 汇总本进程要**对外宣告**的服务（服务名 → 元数据）。
+//
+// 🔴 一条路由都没挂的空表不宣告。宣告的语义是「本进程能服务它」，空表注册进
+// 发现只会把调用方引到一个应答 can't find service 的节点；且不定向的调用方
+// （不带 _rpc_srv_sid/_rpc_srv_addr，按全池负载均衡的那批）每个空节点都在
+// 分流它们的失败重试。空表的典型来源是某个包在 import 期就 server.Service(name)
+// 预建了表、而本进程根本不是那个服务——表建了没关系，宣告必须以「有路由」为准：
+// 路由在各包 init 注册，早于 EventTypStarted 触达本函数，启动时刻表已定型，
+// 「无路由」⇔「本进程不提供该服务」，判据不会误伤稍后动态注册的场景（不存在那种用法）。
+func (xs *Server) collectAnnounce() map[string]string {
+	service := map[string]string{}
+	xs.Registry.Range(func(s *registry.Service) bool {
+		if len(s.Paths()) == 0 {
+			return true
+		}
+		name := strings.TrimPrefix(s.Name(), "/")
+		service[name] = Metadata.Get(name)
+		return true
+	})
+	return service
 }
 
 // parseServiceName 解析服务名称
